@@ -444,6 +444,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
                     int i = (int)Math.Round(x);
                     return i >= 0 && i < ordered.Count ? ordered[i].ObservedUtc.LocalDateTime.ToString("d MMM HH:mm") : string.Empty;
                 },
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = null
             }
@@ -454,6 +455,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
             {
                 MinLimit = 0,
                 Labeler = v => $"{v:0} Mbps",
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = ChartPaints.Separators(theme)
             }
@@ -772,7 +774,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
                 // Every city gets its label; the axis would otherwise skip alternate ones to avoid crowding.
                 MinStep = 1,
                 ForceStepToMin = true,
-                TextSize = 13,
+                TextSize = ChartScale.LabelSize,
                 Labeler = x =>
                 {
                     int i = (int)Math.Round(x);
@@ -789,6 +791,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
             {
                 MinLimit = 0,
                 Labeler = v => $"{v:0} Mbps",
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = ChartPaints.Separators(theme)
             },
@@ -797,6 +800,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
                 MinLimit = 0,
                 Position = AxisPosition.End,
                 Labeler = v => $"{v:0} ms",
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = null
             }

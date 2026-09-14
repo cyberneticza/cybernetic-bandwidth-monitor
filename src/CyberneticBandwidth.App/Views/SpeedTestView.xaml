@@ -204,9 +204,9 @@
                 <TextBlock Text="Speed over time" Style="{StaticResource HeadingText}" />
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0">
                   <Run Text="■" Foreground="{DynamicResource DownloadBrush}" />
-                  <Run Text="download" />
+                  <Run Text="Download" />
                   <Run Text="  ■" Foreground="{DynamicResource UploadBrush}" />
-                  <Run Text="upload" />
+                  <Run Text="Upload" />
                 </TextBlock>
               </StackPanel>
               <lvc:CartesianChart Margin="8,0,8,8"
@@ -384,11 +384,11 @@
               <TextBlock Text="By region" Style="{StaticResource HeadingText}" />
               <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0" TextWrapping="Wrap">
                 <Run Text="■" Foreground="{DynamicResource DownloadBrush}" />
-                <Run Text="download" />
+                <Run Text="Download" />
                 <Run Text="  ■" Foreground="{DynamicResource UploadBrush}" />
-                <Run Text="upload (left scale)" />
+                <Run Text="Upload (left scale)" />
                 <Run Text="  ●" Foreground="{DynamicResource TextBrush}" />
-                <Run Text="response time (right scale)" />
+                <Run Text="Response time (right scale)" />
               </TextBlock>
               <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap"
                          Text="Faded bars and hollow dots are each region's previous test."

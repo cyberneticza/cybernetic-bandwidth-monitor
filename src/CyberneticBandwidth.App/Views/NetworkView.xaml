@@ -167,19 +167,17 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
               <TextBlock Text="Quality over time" Style="{StaticResource HeadingText}" />
-              <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0" TextWrapping="Wrap">
-                <Run Text="■" Foreground="{DynamicResource DownloadBrush}" />
-                <Run Text="internet" />
-                <Run Text="  ■" Foreground="{DynamicResource MutedBrush}" />
-                <Run Text="router" />
-                <Run Text="  ■" Foreground="{DynamicResource AlertBrush}" />
-                <Run Text="unreachable" />
-              </TextBlock>
-              <TextBlock Text="{Binding ProblemSummary}" Style="{StaticResource MutedText}" TextWrapping="Wrap" />
-              <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0">
-                <Run Text="&#xE71E;" FontFamily="{StaticResource IconFont}" />
-                <Run Text="Ctrl + scroll to zoom · drag to pan" />
-              </TextBlock>
+              <TextBlock Text="{Binding ProblemSummary}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0" />
+              <!-- Swatches shaped like what they name: lines for the two response times, a block for
+                   the shaded spans. How to zoom is in the hint shown when the chart is scrolled. -->
+              <WrapPanel Margin="0,6,0,0">
+                <Border Width="12" Height="3" CornerRadius="1.5" Background="{DynamicResource DownloadBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="Internet" Style="{StaticResource MutedText}" Margin="6,0,14,0" />
+                <Border Width="12" Height="3" CornerRadius="1.5" Background="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="Router" Style="{StaticResource MutedText}" Margin="6,0,14,0" />
+                <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AlertBrush}" Opacity="0.5" VerticalAlignment="Center" />
+                <TextBlock Text="Unreachable" Style="{StaticResource MutedText}" Margin="6,0,0,0" />
+              </WrapPanel>
             </StackPanel>
             <ComboBox Grid.Column="1" ItemsSource="{Binding Ranges}" DisplayMemberPath="Label"
                       SelectedItem="{Binding SelectedRange}" Width="140" VerticalAlignment="Top" Margin="12,0,0,0" />
@@ -246,7 +244,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </ScrollViewer>
-            <TextBlock Text="Nothing yet. Events appear here as Cybernetic Bandwidth Monitor notices them."
+            <TextBlock Text="Nothing yet. Events appear here as they happen."
                        Style="{StaticResource MutedText}" HorizontalAlignment="Center" VerticalAlignment="Center"
                        Visibility="{Binding Events.Count, Converter={StaticResource ZeroToVisible}}" />
           </Grid>

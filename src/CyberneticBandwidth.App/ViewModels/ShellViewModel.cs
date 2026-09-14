@@ -62,7 +62,7 @@ public sealed partial class ShellViewModel : ObservableObject
         FooterItems =
         [
             new NavigationItem("Settings", "\uE713", "Appearance, alerts, budgets and storage", settings),
-            new NavigationItem("About", "\uE946", "What Cybernetic Bandwidth Monitor is and how it works", about)
+            new NavigationItem("About", "\uE946", "What this app is and how it works", about)
         ];
 
         _selectedItem = Items[0];

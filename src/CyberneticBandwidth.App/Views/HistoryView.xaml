@@ -216,7 +216,7 @@
                       <TextBlock Text="{Binding PickerHint}" Style="{StaticResource MutedText}" TextWrapping="Wrap"
                                  MaxWidth="266" Margin="2,8,0,0" />
                       <TextBlock Style="{StaticResource MutedText}" Margin="2,2,0,0" FontSize="{StaticResource SizeSmall}">
-                        <Run Text="●" /> <Run Text="usage recorded" />
+                        <Run Text="●" /> <Run Text="Usage recorded" />
                       </TextBlock>
                       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                         <Button Content="Cancel" Command="{Binding ClosePickerCommand}" Margin="0,0,8,0" />
@@ -331,8 +331,8 @@
               <TextBlock Text="{Binding DailyTitle}" Style="{StaticResource PanelHeading}" />
               <WrapPanel Margin="0,2,0,0">
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,0,14,0">
-                  <Run Text="■" Foreground="{DynamicResource DownloadBrush}" /> <Run Text="downloaded" />
-                  <Run Text="  ■" Foreground="{DynamicResource UploadBrush}" /> <Run Text="uploaded" />
+                  <Run Text="■" Foreground="{DynamicResource DownloadBrush}" /> <Run Text="Downloaded" />
+                  <Run Text="  ■" Foreground="{DynamicResource UploadBrush}" /> <Run Text="Uploaded" />
                 </TextBlock>
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,0,14,0"
                            Visibility="{Binding ShowTrendLegend, Converter={StaticResource BoolToVisibility}}">
@@ -340,13 +340,13 @@
                 </TextBlock>
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,0,14,0"
                            Visibility="{Binding ShowPreviousLegend, Converter={StaticResource BoolToVisibility}}">
-                  <Run Text="╌╌" /> <Run Text="previous period" />
+                  <Run Text="╌╌" /> <Run Text="Previous period" />
                 </TextBlock>
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,0,14,0"
                            Visibility="{Binding ShowUnusualLegend, Converter={StaticResource BoolToVisibility}}">
-                  <Run Text="▮" Foreground="{DynamicResource AlertBrush}" /> <Run Text="unusually heavy" />
+                  <Run Text="▮" Foreground="{DynamicResource AlertBrush}" /> <Run Text="Unusually heavy" />
                 </TextBlock>
-                <TextBlock Style="{StaticResource MutedText}" Text="· click a day's bar to open it in Trends"
+                <TextBlock Style="{StaticResource MutedText}" Text="· Click a day's bar to open it in Trends"
                            Visibility="{Binding BarsAreDays, Converter={StaticResource BoolToVisibility}}" />
               </WrapPanel>
             </StackPanel>
@@ -568,11 +568,12 @@
                 <DataGridTemplateColumn Header="Application" Width="*" SortMemberPath="Name">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
-                      <StackPanel Orientation="Horizontal">
-                        <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2" Fill="{Binding Swatch}"
+                      <DockPanel LastChildFill="True">
+                        <Rectangle DockPanel.Dock="Left" Width="10" Height="10" RadiusX="2" RadiusY="2" Fill="{Binding Swatch}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis" />
-                      </StackPanel>
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding Name}" />
+                      </DockPanel>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

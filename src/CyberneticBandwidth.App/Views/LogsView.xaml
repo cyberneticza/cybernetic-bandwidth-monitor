@@ -52,7 +52,7 @@
           <StackPanel>
             <TextBlock Text="How it works" Style="{StaticResource HelpHeading}" />
             <TextBlock Style="{StaticResource HelpText}"
-                       Text="Every 5 seconds Cybernetic Bandwidth Monitor reads Windows' connection table, the same list netstat shows, and compares it with the previous read. New entries are logged as Opened, vanished ones as Closed. No packets are captured and no administrator rights are needed. A connection that opens and closes between two reads is not seen." />
+                       Text="Every 5 seconds the app reads Windows' connection table, the same list netstat shows, and compares it with the previous read. New entries are logged as Opened, vanished ones as Closed. No packets are captured and no administrator rights are needed. A connection that opens and closes between two reads is not seen." />
           </StackPanel>
           <StackPanel>
             <TextBlock Text="Reading a line" Style="{StaticResource HelpHeading}" />

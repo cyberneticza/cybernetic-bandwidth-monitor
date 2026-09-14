@@ -114,14 +114,24 @@ major for changes that break the database or the install layout. The version its
   table or calendar can go no further.
 - **Charts zoom with Ctrl + scroll.** On Trends (both charts) and Network's quality chart, the wheel
   alone now scrolls the page; hold Ctrl and scroll to zoom. Scrolling over a chart without Ctrl shows
-  a brief "Hold Ctrl and scroll to zoom" hint, and each chart's header says so. Drag to pan and
-  double-click to reset work as before.
+  a brief "Hold Ctrl and scroll to zoom" hint, and the reset-zoom button's tooltip says so. Drag to
+  pan and double-click to reset work as before.
 - Settings and About move to the bottom of the side rail.
 - The light/dark toggle is gone from the side rail. The theme is chosen only under Settings ›
   Appearance (System, Light or Dark).
 - The Speed test page scrolls, so every region and the history get their full height.
-- Network event markers on the Trends day chart that sit close together share one label ("Slow +1")
-  instead of printing over each other.
+- Network events on the Trends day chart are thin dashed lines behind the bars, without captions,
+  which printed over the bars, over each other and past the chart's edge. Hovering over the chart
+  names the events in that slot.
+- **A consistent, calmer look for every chart and table.** Axis labels are smaller and muted on
+  Trends, History, Network and Speed test, as on Live. Byte scales rise in round steps (1 GB, 2 GB,
+  3 GB rather than 953.7 MB, 1.9 GB, 2.8 GB). Legends are capitalised (Download, Upload, Internet,
+  Router, Unreachable), and Network's legend uses line and block swatches like the chart. The
+  "Ctrl + scroll to zoom" lines above charts are gone: the hint appears when a chart is scrolled,
+  and the reset-zoom buttons' tooltips explain it. Text in tables ends in "…" when a column is too
+  narrow instead of being cut off mid-letter. History's day log shows "—" rather than "−100%" for
+  days with no traffic. Page text says "the app" rather than repeating its full name in every
+  sentence.
 - The database schema moves to version 3 with a `RegionalSpeedTests` table. The upgrade is automatic.
 
 ### Fixed

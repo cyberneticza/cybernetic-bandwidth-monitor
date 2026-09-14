@@ -51,7 +51,7 @@
           <!-- Start at sign-in -->
           <CheckBox Content="Start Cybernetic Bandwidth Monitor when I sign in" IsChecked="{Binding StartWithWindows}" Margin="0,14,0,0" />
           <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="26,2,0,0"
-                     Text="Opens Cybernetic Bandwidth Monitor quietly in the notification area each time you sign in, through a scheduled task for your account only. No administrator rights needed." />
+                     Text="Opens quietly in the notification area each time you sign in, through a scheduled task for your account only. No administrator rights needed." />
           <TextBlock Text="{Binding SignInError}" Style="{StaticResource BodyText}" Foreground="{DynamicResource AlertBrush}"
                      TextWrapping="Wrap" Margin="26,4,0,0"
                      Visibility="{Binding SignInError, Converter={StaticResource NullToVisibility}}" />
@@ -61,7 +61,7 @@
           <!-- Windows service -->
           <TextBlock Text="Windows service" Style="{StaticResource BodyText}" FontWeight="SemiBold" />
           <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0">
-            <Run Text="Records from the moment Windows starts, whether or not anyone is signed in, and keeps recording when this window is closed. Cybernetic Bandwidth Monitor's window then shows the service's data." />
+            <Run Text="Records from the moment Windows starts, whether or not anyone is signed in, and keeps recording when this window is closed. This window then shows the service's data." />
             <LineBreak />
             <Run Text="Installing and removing it asks for administrator approval once. While it is installed, the history lives in" />
             <Run Text="{Binding SharedDirectory, Mode=OneWay}" />
@@ -129,7 +129,7 @@
                      TextWrapping="Wrap" Margin="0,2,0,0"
                      Visibility="{Binding ServiceError, Converter={StaticResource NullToVisibility}}" />
           <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,6,0,0"
-                     Text="The buttons with a shield ask for administrator approval. Removing the service copies the history back to your own folder and Cybernetic Bandwidth Monitor records in this window again." />
+                     Text="The buttons with a shield ask for administrator approval. Removing the service copies the history back to your own folder and this window records again." />
         </StackPanel>
       </Border>
 
@@ -196,7 +196,7 @@
           <TextBlock Text="{Binding SourceSummary}" Style="{StaticResource BodyText}"
                      TextWrapping="Wrap" Margin="0,8,0,0" />
           <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,10,0,0"
-                     Text="Cybernetic Bandwidth Monitor runs without administrator rights, which rules out packet capture. Byte counts come from the Windows data-usage service and settle roughly once a minute; socket details come from the connection table and refresh every few seconds." />
+                     Text="The app runs without administrator rights, which rules out packet capture. Byte counts come from the Windows data-usage service and settle roughly once a minute; socket details come from the connection table and refresh every few seconds." />
         </StackPanel>
       </Border>
 

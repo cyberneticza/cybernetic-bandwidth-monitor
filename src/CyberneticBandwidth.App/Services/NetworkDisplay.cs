@@ -72,7 +72,7 @@ public static class NetworkDisplay
     public static string StatusMeaning(HealthSample? sample, bool checksEnabled, HealthOptions options)
     {
         if (!checksEnabled) return "Connection quality checks are turned off in Settings.";
-        if (sample is null) return "The first check runs a few seconds after Cybernetic Bandwidth Monitor starts.";
+        if (sample is null) return "The first check runs a few seconds after the app starts.";
 
         return sample.Status switch
         {

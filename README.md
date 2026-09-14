@@ -345,7 +345,8 @@ Pages adapt through `Controls/Layout.cs`, with one flag per page:
 | `Layout.FillViewport` | On a page grid inside a ScrollViewer: fills the window while there is room, scrolls on a short window, and turns star rows into Auto rows while compact |
 | `Layout.PassWheelAtEnd` | On a table or inner scroller: the wheel moves the page once the inner one can go no further (on by default for every DataGrid) |
 | `ChartTooltip.UsePopup` | On every `CartesianChart` (set by the implicit chart style in `Controls.xaml`): hover details open in a popup beside the pointer instead of LiveCharts' tooltip drawn inside the chart, which is cut off at its edges. The title is the X axis's label for the hovered point; rows are series swatch, `Name` and `YToolTipLabelFormatter` value, so formatters should return just the value |
-| `ChartZoom.RequireCtrl` | On a zoomable chart: the wheel zooms only with Ctrl held; otherwise it scrolls the page and a "Hold Ctrl and scroll to zoom" pill appears over the chart. Put a "Ctrl + scroll to zoom" hint in the chart's header too |
+| `ChartZoom.RequireCtrl` | On a zoomable chart: the wheel zooms only with Ctrl held; otherwise it scrolls the page and a "Hold Ctrl and scroll to zoom" pill appears over the chart. Say how to zoom in the chart's reset-zoom button tooltip rather than in a line above the chart |
+| `ChartScale` | For every chart axis: `LabelSize` for its `TextSize`, and `Bytes(axis, MaxOf(series))` for a byte scale in round steps (1, 2 or 5 of a binary unit). Axes built without it read 953.7 MB, 1.9 GB |
 
 `Layout.FillViewport` gives its grid a real height from the first layout pass. Without that, a
 ScrollViewer offers unlimited height before the page has loaded, and a DataGrid measured that way

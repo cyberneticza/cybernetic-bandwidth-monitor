@@ -614,6 +614,7 @@
     <Setter Property="EnableColumnVirtualization" Value="True" />
     <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
     <Setter Property="ui:Layout.PassWheelAtEnd" Value="True" />
+    <Setter Property="ui:TableText.Trim" Value="True" />
   </Style>
 
   <Style TargetType="DataGridColumnHeader">

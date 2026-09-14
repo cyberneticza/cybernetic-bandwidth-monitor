@@ -7,6 +7,7 @@ using LiveChartsCore.Defaults;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
+using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -206,7 +207,7 @@ public sealed partial class GraphsViewModel : ObservableObject
             BuildOverview();
 
             OverviewMessage = _days.All(d => d.Sent + d.Received == 0)
-                ? "No usage recorded for this period yet. Leave Cybernetic Bandwidth Monitor running and check back."
+                ? "No usage recorded for this period yet. Leave the app running and check back."
                 : null;
 
             await LoadDayAsync();
@@ -389,6 +390,7 @@ public sealed partial class GraphsViewModel : ObservableObject
             {
                 Labeler = DayLabel,
                 MinStep = 1,
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = null
             }
@@ -398,12 +400,13 @@ public sealed partial class GraphsViewModel : ObservableObject
         [
             new Axis
             {
-                MinLimit = 0,
                 Labeler = ByteFormat.Size,
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = ChartPaints.Separators(theme)
             }
         ];
+        ChartScale.Bytes(OverviewYAxes[0], ChartScale.MaxOf(OverviewSeries));
 
         UpdateSelectionSection();
     }
@@ -477,7 +480,7 @@ public sealed partial class GraphsViewModel : ObservableObject
                     if (TotalOf(apps) < hourlyTotal * CompleteEnough)
                     {
                         message = minutesMayExist
-                            ? "Minute detail covers only part of this day, from when Cybernetic Bandwidth Monitor was recording. Hourly shows all of it."
+                            ? "Minute detail covers only part of this day, from when the app was recording. Hourly shows all of it."
                             : $"Minute detail is kept for {_retention.MinuteBucketDays} days. Hourly shows this day in full.";
                     }
                 }
@@ -653,45 +656,27 @@ public sealed partial class GraphsViewModel : ObservableObject
             .ToList();
         EndHover();
 
-        // Network events as thin labelled markers, so a dip in traffic can be read against a
-        // drop or a network switch at the same moment. Problems in the alert colour.
-        // Every event keeps its own thin marker, but a label needs room: events within
-        // LabelClusterHours of a labelled one add "+N" to its label instead of printing over it.
-        // The hover panel lists each one.
-        const double LabelClusterHours = 1.5;
-        double markerWidth = Math.Max(binHours * 0.35, 1 / 60d);
-        var markers = _dayEvents
+        // Network events as hairline markers behind the bars, so a dip in traffic can be read against
+        // a drop or a network switch at the same moment, without covering the traffic. Problems in the
+        // alert colour. No captions on the chart: they collided with each other and with the chart's
+        // edge; the header counts the problems and the hover panel names each event.
+        DetailSections = _dayEvents
             .Where(e => e.Kind is not NetworkEventKind.ConnectionRecovered)
-            .Select(e => (Event: e, X: (e.ObservedUtc - _dayStart).TotalHours))
-            .OrderBy(m => m.X)
-            .ToList();
-
-        var clusters = new List<List<(NetworkEventRecord Event, double X)>>();
-        foreach (var marker in markers)
-        {
-            if (clusters.Count > 0 && marker.X - clusters[^1][0].X < LabelClusterHours) clusters[^1].Add(marker);
-            else clusters.Add([marker]);
-        }
-
-        DetailSections = clusters
-            .SelectMany(cluster => cluster.Select((m, i) =>
+            .Select(e =>
             {
-                var colour = m.Event.IsProblem ? theme.Alert : theme.Muted;
-                var section = new RectangularSection
+                double x = (e.ObservedUtc - _dayStart).TotalHours;
+                return new RectangularSection
                 {
-                    Xi = m.X,
-                    Xj = m.X + markerWidth,
-                    Fill = ChartPaints.Fill(colour, 150)
+                    Xi = x,
+                    Xj = x,
+                    Stroke = new SolidColorPaint((e.IsProblem ? theme.Alert : theme.Muted).WithAlpha(170))
+                    {
+                        StrokeThickness = 1.5f,
+                        PathEffect = new DashEffect([4, 3])
+                    },
+                    ZIndex = -1
                 };
-                if (i == 0)
-                {
-                    string label = NetworkDisplay.ShortEventLabel(m.Event.Kind);
-                    section.Label = cluster.Count == 1 ? label : $"{label} +{cluster.Count - 1}";
-                    section.LabelPaint = ChartPaints.Fill(cluster.Any(c => c.Event.IsProblem) ? theme.Alert : theme.Muted);
-                    section.LabelSize = 11;
-                }
-                return section;
-            }))
+            })
             .ToArray();
 
         foreach (var row in DayApps)
@@ -711,6 +696,7 @@ public sealed partial class GraphsViewModel : ObservableObject
                     : dayStart.AddHours(hours).ToLocalTime().ToString(timeFormat),
                 UnitWidth = binHours,
                 MinStep = binHours,
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = null
             }
@@ -720,12 +706,13 @@ public sealed partial class GraphsViewModel : ObservableObject
         [
             new Axis
             {
-                MinLimit = 0,
                 Labeler = ByteFormat.Size,
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = ChartPaints.Separators(theme)
             }
         ];
+        ChartScale.Bytes(DetailYAxes[0], ChartScale.MaxOf(DetailSeries));
     }
 
     private ISeries MakeDetailSeries(string name, ObservablePoint[] values, SKColor colour)

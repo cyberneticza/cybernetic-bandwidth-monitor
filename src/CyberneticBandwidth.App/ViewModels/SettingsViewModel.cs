@@ -194,7 +194,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         (ServiceStatusText, ServiceStatusDetail) = Service.State switch
         {
             ServiceState.NotInstalled => ("Not installed",
-                "Cybernetic Bandwidth Monitor records while this window or its notification-area icon is running."),
+                "Recording happens while this window or its notification-area icon is running."),
             ServiceState.Running when CanUpdateService => ($"Running version {Service.InstalledVersion}; this window is {_appVersion}",
                 "Update the service so both run the same version."),
             ServiceState.Running when _link is not null && !connected => ("Running, not answering yet",

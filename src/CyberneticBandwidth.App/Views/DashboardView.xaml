@@ -293,12 +293,12 @@
                 <DataGridTemplateColumn Header="Process" Width="*" MinWidth="120" SortMemberPath="ProcessName">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
-                      <StackPanel Orientation="Horizontal">
-                        <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,8,0"
+                      <DockPanel LastChildFill="True">
+                        <Image DockPanel.Dock="Left" Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,8,0"
                                RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{Binding ProcessName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding ProcessName}" />
-                      </StackPanel>
+                      </DockPanel>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

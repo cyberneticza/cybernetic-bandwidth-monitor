@@ -344,11 +344,11 @@ public sealed partial class HistoryViewModel : ObservableObject
         _report = report;
 
         HasData = report.FirstRecorded is not null;
-        Message = HasData ? null : "No usage was recorded in this range. Pick another range, or leave Cybernetic Bandwidth Monitor running and check back.";
+        Message = HasData ? null : "No usage was recorded in this range. Pick another range, or leave the app running and check back.";
 
         var notes = new List<string>();
         if (HasData && report.RecordedDays < _current.DayCount)
-            notes.Add($"Cybernetic Bandwidth Monitor's records in this range start on {report.FirstRecorded:dddd d MMMM}, so averages and patterns use " +
+            notes.Add($"Records in this range start on {report.FirstRecorded:dddd d MMMM}, so averages and patterns use " +
                       $"those {Plural(report.RecordedDays, "day")} rather than all {_current.DayCount}.");
         if (HasData && CompareWithPrevious && !previousRecorded)
             notes.Add($"Nothing was recorded in the {Plural(RangeDays, "day")} before, so there is no comparison.");
@@ -713,11 +713,12 @@ public sealed partial class HistoryViewModel : ObservableObject
             {
                 Labeler = x => BucketLabel(x),
                 MinStep = 1,
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = null
             }
         ];
-        DailyYAxes = [BytesAxis(theme)];
+        DailyYAxes = [BytesAxis(theme, DailySeries)];
     }
 
     private string BucketLabel(double x)
@@ -763,11 +764,12 @@ public sealed partial class HistoryViewModel : ObservableObject
                 Labeler = x => (int)Math.Round(x) is var i and >= 0 and < 7 ? WeekdayName(i, true) : string.Empty,
                 MinStep = 1,
                 ForceStepToMin = true,
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = null
             }
         ];
-        WeekdayYAxes = [BytesAxis(theme)];
+        WeekdayYAxes = [BytesAxis(theme, WeekdaySeries)];
 
         var counted = Enumerable.Range(0, 7).Where(i => r.WeekdayCounts[i] > 0).ToList();
         if (counted.Count < 2)
@@ -942,11 +944,12 @@ public sealed partial class HistoryViewModel : ObservableObject
             {
                 Labeler = x => BucketLabel(x),
                 MinStep = 1,
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = null
             }
         ];
-        AppYAxes = [BytesAxis(theme)];
+        AppYAxes = [BytesAxis(theme, AppSeries)];
 
         AppRows.Clear();
         foreach (var app in r.Apps)
@@ -1002,7 +1005,13 @@ public sealed partial class HistoryViewModel : ObservableObject
         {
             string vs = string.Empty;
             double vsSort = double.MinValue;
-            if (d.IsRecorded && r.DailyAverage > 0)
+            // A day with no traffic reads "—" rather than "−100%": the note says "No traffic", and a
+            // column of −100% on quiet weekends looks like an alarm.
+            if (d.IsRecorded && r.DailyAverage > 0 && d.Measure == 0 && d.Day != today)
+            {
+                vs = "—";
+            }
+            else if (d.IsRecorded && r.DailyAverage > 0)
             {
                 vsSort = (d.Measure - r.DailyAverage) / r.DailyAverage;
                 vs = Math.Abs(vsSort) < 0.03 ? "≈ average" : $"{(vsSort > 0 ? "+" : "−")}{Math.Abs(vsSort) * 100:0}%";
@@ -1272,13 +1281,19 @@ public sealed partial class HistoryViewModel : ObservableObject
         : first.Month != last.Month ? $"{first:d MMM} – {last:d MMM yyyy}"
         : $"{first.Day} – {last:d MMM yyyy}";
 
-    private static Axis BytesAxis(ChartTheme theme) => new()
+    /// <summary>A byte scale in round steps up to the tallest of <paramref name="series"/>.</summary>
+    private static Axis BytesAxis(ChartTheme theme, IEnumerable<ISeries> series)
     {
-        MinLimit = 0,
-        Labeler = ByteFormat.Size,
-        LabelsPaint = ChartPaints.Labels(theme),
-        SeparatorsPaint = ChartPaints.Separators(theme)
-    };
+        var axis = new Axis
+        {
+            Labeler = ByteFormat.Size,
+            TextSize = ChartScale.LabelSize,
+            LabelsPaint = ChartPaints.Labels(theme),
+            SeparatorsPaint = ChartPaints.Separators(theme)
+        };
+        ChartScale.Bytes(axis, ChartScale.MaxOf(series));
+        return axis;
+    }
 
     private static SolidColorBrush ToBrush(SKColor c)
     {

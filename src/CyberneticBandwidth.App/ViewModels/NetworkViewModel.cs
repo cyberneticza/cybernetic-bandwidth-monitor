@@ -299,6 +299,7 @@ public sealed partial class NetworkViewModel : ObservableObject
                 MinLimit = 0,
                 MaxLimit = span.TotalHours,
                 Labeler = x => x < 0 ? string.Empty : start.AddHours(x).ToLocalTime().ToString(format),
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = null
             }
@@ -309,6 +310,7 @@ public sealed partial class NetworkViewModel : ObservableObject
             {
                 MinLimit = 0,
                 Labeler = v => $"{v:0} ms",
+                TextSize = ChartScale.LabelSize,
                 LabelsPaint = ChartPaints.Labels(theme),
                 SeparatorsPaint = ChartPaints.Separators(theme)
             }
