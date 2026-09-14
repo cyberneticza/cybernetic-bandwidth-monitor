@@ -160,6 +160,8 @@
                 <TextBlock Text="up, below" Style="{StaticResource MutedText}" Margin="6,0,0,0" />
               </StackPanel>
             </Grid>
+            <!-- A running strip: redrawn each second without animation, so moving the time window or
+                 changing the scale never plays as a zoom. -->
             <lvc:CartesianChart Margin="8,4,12,8"
                                 Series="{Binding ThroughputSeries}"
                                 XAxes="{Binding ThroughputXAxes}"
@@ -168,6 +170,7 @@
                                 TooltipPosition="Top"
                                 TooltipTextPaint="{Binding TooltipTextPaint}"
                                 TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}"
+                                AnimationsSpeed="0:0:0"
                                 ZoomMode="None" />
           </DockPanel>
         </Border>

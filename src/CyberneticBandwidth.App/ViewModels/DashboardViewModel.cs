@@ -232,19 +232,28 @@ public sealed partial class DashboardViewModel : ObservableObject
         while (DownloadPoints.Count > HistorySeconds) DownloadPoints.RemoveAt(0);
         while (UploadPoints.Count > HistorySeconds) UploadPoints.RemoveAt(0);
 
+        // Always the last five minutes, ending now: the chart runs right to left from the first
+        // second instead of stretching a few seconds of data across its whole width.
+        var x = ThroughputXAxes[0];
+        x.MinLimit = now.AddSeconds(-HistorySeconds).Ticks;
+        x.MaxLimit = now.Ticks;
+
         // The same scale above and below the line, so zero sits in the middle and a burst either
         // way is drawn to the same size. Left to itself the axis fits only the data, and a quiet
-        // download with an upload burst puts zero at the very top.
+        // download with an upload burst puts zero at the very top. The scale moves in doublings,
+        // so it changes only when traffic crosses one, not with every second's peak.
         double peak = Math.Max(
             DownloadPoints.Max(p => p.Value ?? 0),
             UploadPoints.Max(p => -(p.Value ?? 0)));
-        double limit = Math.Max(MinimumScale, peak * 1.15);
-        var axis = ThroughputYAxes[0];
-        if (Math.Abs((axis.MaxLimit ?? 0) - limit) > limit * 0.05)
+        double limit = MinimumScale;
+        while (limit < peak * 1.15) limit *= 2;
+
+        var y = ThroughputYAxes[0];
+        if (y.MaxLimit != limit)
         {
-            axis.MinLimit = -limit;
-            axis.MaxLimit = limit;
-            axis.MinStep = limit / 2;
+            y.MinLimit = -limit;
+            y.MaxLimit = limit;
+            y.MinStep = limit / 2;
         }
     }
 

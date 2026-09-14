@@ -78,6 +78,10 @@ major for changes that break the database or the install layout. The version its
   removes a per-user NetTrace install and stops if NetTrace's Windows service is still installed: remove
   that from NetTrace's Settings first. The logo is unchanged; the side rail shows the name on two
   lines, "Cybernetic" over "Bandwidth Monitor".
+- **The Live throughput chart runs steadily.** It always shows the last five minutes, with new
+  seconds arriving on the right from the moment the app starts, and redraws without animation, so
+  it no longer appears to zoom in and out as traffic comes and goes. Its scale changes in doublings
+  (16 KB/s, 32 KB/s, …) instead of following every burst.
 - **Start at sign-in uses a scheduled task** (Settings › Running in the background) instead of the
   `Run` registry key, so Cybernetic Bandwidth Monitor starts promptly after sign-in and Task Manager's startup list does
   not switch it off. It still needs no administrator rights. An existing `Run` entry for the same copy
