@@ -1,0 +1,37 @@
+<h3>Check whether PowerShell 7 is already installed</h3>
+<p>Open <strong>Windows PowerShell</strong> (Start › type <em>PowerShell</em>) and run:</p>
+<pre><code>Get-Command pwsh -ErrorAction SilentlyContinue
+pwsh -NoProfile -Command '$PSVersionTable.PSVersion'</code></pre>
+<p>If the first command prints a path and the second prints <code>7.x</code>, PowerShell 7 is installed and you can skip the
+rest of this section. If nothing is printed, or you see <em>"The term 'pwsh' is not recognized"</em>, install it using one of
+the methods below.</p>
+
+<table>
+  <tr><th style="width:28%">Method</th><th style="width:18%">Admin rights</th><th>When to use it</th></tr>
+  <tr><td>A. winget (package)</td><td>Yes (UAC prompt)</td><td>You are an administrator on the device.</td></tr>
+  <tr><td>B. winget (Microsoft Store)</td><td>No</td><td>Standard user, and the Microsoft Store is allowed on the device.</td></tr>
+  <tr><td>C. Microsoft install script</td><td>No</td><td>Standard user, and the Store is blocked or winget is missing.</td></tr>
+</table>
+
+<h3>Method A: winget, installed for all users</h3>
+<pre><code>winget install --id Microsoft.PowerShell --source winget `
+    --accept-package-agreements --accept-source-agreements</code></pre>
+
+<h3>Method B: winget from the Microsoft Store, current user only</h3>
+<pre><code>winget install --id 9MZ1SNWT0N5D --source msstore `
+    --accept-package-agreements --accept-source-agreements</code></pre>
+<p>If <code>winget</code> itself is not recognised, install <em>App Installer</em> from the Microsoft Store, or use method C.</p>
+
+<h3>Method C: Microsoft's install script, current user only</h3>
+<p>Downloads PowerShell 7 from Microsoft into <code>%LocalAppData%\Microsoft\powershell</code> and adds it to your user PATH:</p>
+<pre><code>$installer = Invoke-RestMethod 'https://aka.ms/install-powershell.ps1'
+Invoke-Expression "&amp; { $installer } -AddToPath"</code></pre>
+<div class="warn">
+  <strong>Security software may block this command.</strong>
+  Downloading a script and running it straight away is a pattern that antivirus and company endpoint tools watch for.
+  On a managed device, prefer method A or B, or ask IT to install PowerShell 7.
+</div>
+
+<h3>After installing</h3>
+<p>Close and reopen the PowerShell window so the new PATH is picked up, then confirm:</p>
+<pre><code>pwsh -v</code></pre>

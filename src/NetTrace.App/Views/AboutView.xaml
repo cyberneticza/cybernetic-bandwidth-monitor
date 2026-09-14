@@ -1,0 +1,90 @@
+<UserControl x:Class="NetTrace.App.Views.AboutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" FocusVisualStyle="{x:Null}">
+    <StackPanel Margin="{StaticResource PagePadding}" MaxWidth="820" HorizontalAlignment="Left">
+
+      <!-- Identity, under a strip in the brand's two directions. -->
+      <Border Style="{StaticResource Panel}" Margin="0,0,0,14" ClipToBounds="True">
+        <StackPanel>
+        <Border Height="5" Background="{DynamicResource BrandBrush}" CornerRadius="10,10,0,0" />
+        <Grid Margin="24,22,24,24">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+
+          <Image Source="{Binding Logo}" Width="72" Height="72" VerticalAlignment="Top" Margin="0,0,20,0"
+                 RenderOptions.BitmapScalingMode="HighQuality" />
+
+          <StackPanel Grid.Column="1">
+            <TextBlock Style="{StaticResource TitleText}">
+              <Run Text="{Binding ProductName, Mode=OneWay}" />
+              <Run Text="{Binding Version, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" />
+            </TextBlock>
+            <TextBlock Text="Where your bandwidth goes" Style="{StaticResource MutedText}" Margin="0,2,0,0" />
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0">
+              <Run Text="Created by" Foreground="{DynamicResource MutedBrush}" />
+              <Run Text="{Binding Author, Mode=OneWay}" FontWeight="SemiBold" />
+            </TextBlock>
+            <TextBlock Text="{Binding Copyright}" Style="{StaticResource MutedText}" Margin="0,2,0,0" />
+          </StackPanel>
+        </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- What it does -->
+      <Border Style="{StaticResource Panel}" Padding="22" Margin="0,0,0,14">
+        <StackPanel>
+          <TextBlock Text="What NetTrace does" Style="{StaticResource HeadingText}" />
+
+          <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,10,0,0" LineHeight="20"
+                     Text="NetTrace shows which applications on this PC are using your network, how much they send and receive, and how that changes over a day, a week or a year. It also watches the connection itself: what you are connected to, whether it is healthy, when it dropped or switched, and how fast it really is. It runs quietly in the notification area and keeps its own history, so you can look back at a busy afternoon, see whether a bad call was your Wi-Fi or the internet, or find out what used your data allowance last month." />
+
+          <TextBlock Text="How it measures" Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,16,0,0" />
+          <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="20"
+                     Text="Per-application byte counts come from the Windows data-usage service, the same numbers behind Settings › Network › Data usage, and settle about once a minute. Live throughput comes from the network adapters every second, and the Connections page reads the socket table every few seconds." />
+
+          <TextBlock Text="No administrator rights" Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,16,0,0" />
+          <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="20"
+                     Text="NetTrace runs as a standard user: no driver, no packet capture and no UAC prompt. Everything it installs and records stays inside your own Windows profile, unless you choose to install the optional Windows service in Settings." />
+
+          <TextBlock Text="Your data stays here" Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,16,0,0" />
+          <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="20"
+                     Text="History is kept in a local database in the data folder below and is never uploaded. NetTrace only goes online for two things you can see and control: the connection quality check (a tiny request to Cloudflare every 30 seconds, which can be turned off in Settings) and speed tests you start yourself (to Cloudflare, and to Vultr for the regional test). Neither sends anything about you or your usage." />
+        </StackPanel>
+      </Border>
+
+      <!-- Version and environment -->
+      <Border Style="{StaticResource Panel}" Padding="22">
+        <StackPanel>
+          <TextBlock Text="Version details" Style="{StaticResource HeadingText}" />
+
+          <ItemsControl ItemsSource="{Binding Details}" Margin="0,12,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,0,0,7">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="{Binding Label}" Style="{StaticResource MutedText}" VerticalAlignment="Top" />
+                  <TextBlock Grid.Column="1" Text="{Binding Value}" Style="{StaticResource BodyText}"
+                             TextWrapping="Wrap" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <Button Content="Copy details" Command="{Binding CopyDetailsCommand}" Margin="0,0,8,0" />
+            <Button Content="Open data folder" Command="{Binding OpenDataFolderCommand}" Margin="0,0,8,0" />
+            <Button Content="Open logs" Command="{Binding OpenLogFolderCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

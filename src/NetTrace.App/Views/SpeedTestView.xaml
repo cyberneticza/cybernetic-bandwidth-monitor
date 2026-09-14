@@ -1,0 +1,416 @@
+<UserControl x:Class="NetTrace.App.Views.SpeedTestView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:NetTrace.App.Converters"
+             xmlns:ui="clr-namespace:NetTrace.App.Controls"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF">
+
+  <UserControl.Resources>
+    <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
+    <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+    <conv:ZeroToVisibleConverter x:Key="ZeroToVisible" />
+
+    <Style x:Key="MetricValue" TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+      <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+      <Setter Property="FontSize" Value="26" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    </Style>
+
+    <!-- A ChangeInfo shown beside a figure. Set the TextBlock's DataContext to the ChangeInfo;
+         nothing shows while it is null (comparison off, or nothing to compare with). -->
+    <Style x:Key="ChangeText" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+      <Setter Property="Text" Value="{Binding Text}" />
+      <Setter Property="FontSize" Value="{StaticResource SizeSmall}" />
+      <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsBetter}" Value="True">
+          <Setter Property="Foreground" Value="{DynamicResource DownloadBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding IsWorse}" Value="True">
+          <Setter Property="Foreground" Value="{DynamicResource AlertBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+          <Setter Property="Visibility" Value="Collapsed" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <DataTemplate x:Key="SuitabilityTemplate">
+      <Grid Margin="0,5">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="24" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <TextBlock VerticalAlignment="Top" Margin="0,2,0,0">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource IconText}">
+              <Setter Property="Text" Value="&#xE711;" />
+              <Setter Property="Foreground" Value="{DynamicResource UploadBrush}" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOk}" Value="True">
+                  <Setter Property="Text" Value="&#xE73E;" />
+                  <Setter Property="Foreground" Value="{DynamicResource DownloadBrush}" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+        <StackPanel Grid.Column="1">
+          <TextBlock Text="{Binding Activity}" Style="{StaticResource BodyText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Detail}" Style="{StaticResource MutedText}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Change}" TextWrapping="Wrap" FontSize="{StaticResource SizeSmall}"
+                     Visibility="{Binding Change, Converter={StaticResource NullToVisibility}}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+                <Setter Property="Foreground" Value="{DynamicResource AlertBrush}" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsOk}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DownloadBrush}" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+
+    <!-- Rows that take part in the comparison stand out in the tables. -->
+    <Style x:Key="ComparedRow" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsCompared}" Value="True">
+          <Setter Property="Background" Value="{DynamicResource SelectionBrush}" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ProblemRow" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding HasError}" Value="True">
+          <Setter Property="Foreground" Value="{DynamicResource AlertBrush}" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+  </UserControl.Resources>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" FocusVisualStyle="{x:Null}">
+    <StackPanel Margin="{StaticResource PagePadding}" ui:Layout.CompactBelow="720">
+
+      <!-- ======================================================== tabs -->
+      <Border Background="{DynamicResource RaisedBrush}" CornerRadius="6" Padding="2" HorizontalAlignment="Left" Margin="0,0,0,16">
+        <StackPanel Orientation="Horizontal">
+          <RadioButton Style="{StaticResource SegmentButton}" GroupName="SpeedTab" IsChecked="{Binding IsLocalTab}">
+            <TextBlock>
+              <Run Text="&#xEC4A;" FontFamily="{StaticResource IconFont}" />
+              <Run Text=" Local test" />
+            </TextBlock>
+          </RadioButton>
+          <RadioButton Style="{StaticResource SegmentButton}" GroupName="SpeedTab" IsChecked="{Binding IsWorldTab}">
+            <TextBlock>
+              <Run Text="&#xE909;" FontFamily="{StaticResource IconFont}" />
+              <Run Text=" Around the world" />
+            </TextBlock>
+          </RadioButton>
+        </StackPanel>
+      </Border>
+
+      <!-- ======================================================== local test -->
+      <StackPanel Visibility="{Binding IsLocalTab, Converter={StaticResource BoolToVisibility}}">
+        <ui:AdaptiveColumns>
+
+          <Border Style="{StaticResource Panel}" Padding="20,16" ui:AdaptiveColumns.Weight="3">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                  <TextBlock Text="Internet speed test" Style="{StaticResource HeadingText}" />
+                  <TextBlock Text="{Binding PhaseText}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,16,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                  <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,8,0"
+                          Visibility="{Binding IsNearestRunning, Converter={StaticResource BoolToVisibility}}" />
+                  <Button Content="{Binding StartLabel}" Command="{Binding StartCommand}" Style="{StaticResource PrimaryButton}" />
+                </StackPanel>
+              </Grid>
+
+              <ProgressBar Value="{Binding Progress}" Margin="0,12,0,0"
+                           Visibility="{Binding IsNearestRunning, Converter={StaticResource BoolToVisibility}}" />
+
+              <ui:AdaptiveGrid MinItemWidth="130" MaxColumns="4" Spacing="12" Margin="0,16,0,0">
+                <StackPanel>
+                  <TextBlock Style="{StaticResource MutedText}">
+                    <Run Text="&#xE74B;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource DownloadBrush}" />
+                    <Run Text="Download" />
+                  </TextBlock>
+                  <TextBlock Text="{Binding Download}" Style="{StaticResource MetricValue}" Foreground="{DynamicResource DownloadBrush}" />
+                  <TextBlock DataContext="{Binding DownloadChange}" Style="{StaticResource ChangeText}" />
+                </StackPanel>
+                <StackPanel>
+                  <TextBlock Style="{StaticResource MutedText}">
+                    <Run Text="&#xE74A;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource UploadBrush}" />
+                    <Run Text="Upload" />
+                  </TextBlock>
+                  <TextBlock Text="{Binding Upload}" Style="{StaticResource MetricValue}" Foreground="{DynamicResource UploadBrush}" />
+                  <TextBlock DataContext="{Binding UploadChange}" Style="{StaticResource ChangeText}" />
+                </StackPanel>
+                <StackPanel ToolTip="How long a request takes to come back. Lower feels snappier.">
+                  <TextBlock Text="Response time" Style="{StaticResource MutedText}" />
+                  <TextBlock Text="{Binding Latency}" Style="{StaticResource MetricValue}" />
+                  <TextBlock DataContext="{Binding LatencyChange}" Style="{StaticResource ChangeText}" />
+                </StackPanel>
+                <StackPanel ToolTip="How much the response time varies. Lower keeps calls and games smooth.">
+                  <TextBlock Text="Jitter" Style="{StaticResource MutedText}" />
+                  <TextBlock Text="{Binding Jitter}" Style="{StaticResource MetricValue}" />
+                  <TextBlock DataContext="{Binding JitterChange}" Style="{StaticResource ChangeText}" />
+                </StackPanel>
+              </ui:AdaptiveGrid>
+
+              <TextBlock Text="{Binding ResultSummary}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,10,0,0"
+                         Visibility="{Binding ResultSummary, Converter={StaticResource NullToVisibility}}" />
+              <TextBlock Text="{Binding Warning}" Style="{StaticResource BodyText}" Foreground="{DynamicResource UploadBrush}"
+                         TextWrapping="Wrap" Margin="0,10,0,0"
+                         Visibility="{Binding Warning, Converter={StaticResource NullToVisibility}}" />
+              <TextBlock Text="{Binding RouteNote}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,8,0,0"
+                         Visibility="{Binding RouteNote, Converter={StaticResource NullToVisibility}}" />
+
+              <Rectangle Height="1" Fill="{DynamicResource LineBrush}" Margin="0,12,0,8" />
+              <CheckBox Content="Compare with the previous test" IsChecked="{Binding CompareLocal}" HorizontalAlignment="Left" />
+              <TextBlock Text="{Binding LocalCompareNote}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="24,0,0,0"
+                         Visibility="{Binding LocalCompareNote, Converter={StaticResource NullToVisibility}}" />
+            </StackPanel>
+          </Border>
+
+          <Border Style="{StaticResource Panel}" Padding="18,14" ui:AdaptiveColumns.Weight="2">
+            <StackPanel>
+              <TextBlock Text="What this connection is good for" Style="{StaticResource HeadingText}" />
+              <TextBlock Text="Run a test to see how the result holds up for everyday things."
+                         Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                         Visibility="{Binding Suitability.Count, Converter={StaticResource ZeroToVisible}}" />
+              <ItemsControl ItemsSource="{Binding Suitability}" ItemTemplate="{StaticResource SuitabilityTemplate}" Margin="0,8,0,0" />
+            </StackPanel>
+          </Border>
+        </ui:AdaptiveColumns>
+
+        <!-- Past nearest-server tests: chart and table side by side. -->
+        <ui:AdaptiveColumns Margin="0,16,0,0">
+
+          <Border Style="{StaticResource Panel}" Height="320">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Top" Margin="16,12,16,4">
+                <TextBlock Text="Speed over time" Style="{StaticResource HeadingText}" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0">
+                  <Run Text="■" Foreground="{DynamicResource DownloadBrush}" />
+                  <Run Text="download" />
+                  <Run Text="  ■" Foreground="{DynamicResource UploadBrush}" />
+                  <Run Text="upload" />
+                </TextBlock>
+              </StackPanel>
+              <lvc:CartesianChart Margin="8,0,8,8"
+                                  Series="{Binding HistorySeries}"
+                                  XAxes="{Binding HistoryXAxes}"
+                                  YAxes="{Binding HistoryYAxes}"
+                                  LegendPosition="Hidden"
+                                  TooltipPosition="Top"
+                                  TooltipTextPaint="{Binding TooltipTextPaint}"
+                                  TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}" />
+            </DockPanel>
+          </Border>
+
+          <Border Style="{StaticResource Panel}" Height="320">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Top" Margin="16,12,16,4">
+                <TextBlock Text="Past tests" Style="{StaticResource HeadingText}" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0" Text="Newest first. The compared tests are highlighted." />
+              </StackPanel>
+              <DataGrid ItemsSource="{Binding History}" Margin="8,0,8,8" RowStyle="{StaticResource ComparedRow}">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="When" Binding="{Binding When}" Width="140" />
+                  <DataGridTextColumn Header="Network" Binding="{Binding Network}" Width="*" />
+                  <DataGridTextColumn Header="Down" Binding="{Binding Download}" Width="80" ElementStyle="{StaticResource NumericText}" />
+                  <DataGridTextColumn Header="Up" Binding="{Binding Upload}" Width="80" ElementStyle="{StaticResource NumericText}" />
+                  <DataGridTextColumn Header="Response" Binding="{Binding Latency}" Width="70" ElementStyle="{StaticResource NumericText}" />
+                </DataGrid.Columns>
+              </DataGrid>
+            </DockPanel>
+          </Border>
+        </ui:AdaptiveColumns>
+      </StackPanel>
+
+      <!-- ======================================================== around the world -->
+      <!-- Fixed-location servers: the Local test's Cloudflare always answers from the nearest data centre. -->
+      <StackPanel Visibility="{Binding IsWorldTab, Converter={StaticResource BoolToVisibility}}">
+        <ui:AdaptiveColumns>
+
+          <Border Style="{StaticResource Panel}" ui:AdaptiveColumns.Weight="3">
+            <DockPanel>
+              <Grid DockPanel.Dock="Top" Margin="16,12,12,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,12,0">
+                  <TextBlock Text="Around the world" Style="{StaticResource HeadingText}" />
+                  <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                             Text="Response time and download speed to test servers in fixed cities, for how services hosted far away will feel. About 8 seconds a region, one at a time; these servers take no uploads." />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                  <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,8,0"
+                          Visibility="{Binding IsRegionalRunning, Converter={StaticResource BoolToVisibility}}" />
+                  <Button Content="{Binding RegionsStartLabel}" Command="{Binding TestAllRegionsCommand}" Style="{StaticResource PrimaryButton}" />
+                </StackPanel>
+              </Grid>
+
+              <TextBlock DockPanel.Dock="Top" Text="{Binding RegionsSummary}" Style="{StaticResource BodyText}"
+                         TextWrapping="Wrap" Margin="16,8,16,0" />
+              <TextBlock DockPanel.Dock="Top" Text="{Binding RegionsWarning}" Style="{StaticResource BodyText}"
+                         Foreground="{DynamicResource UploadBrush}" TextWrapping="Wrap" Margin="16,4,16,0"
+                         Visibility="{Binding RegionsWarning, Converter={StaticResource NullToVisibility}}" />
+              <TextBlock DockPanel.Dock="Top" Text="{Binding RouteNote}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="16,4,16,0"
+                         Visibility="{Binding RouteNote, Converter={StaticResource NullToVisibility}}" />
+
+              <StackPanel DockPanel.Dock="Top" Margin="16,10,16,0">
+                <CheckBox Content="Compare each region with its previous test" IsChecked="{Binding CompareRegions}" HorizontalAlignment="Left" />
+                <TextBlock Text="{Binding RegionsCompareNote}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="24,0,0,0"
+                           Visibility="{Binding RegionsCompareNote, Converter={StaticResource NullToVisibility}}" />
+              </StackPanel>
+
+              <Grid DockPanel.Dock="Top" Margin="16,10,16,4">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="84" />
+                  <ColumnDefinition Width="92" />
+                  <ColumnDefinition Width="100" />
+                  <ColumnDefinition Width="36" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Server" Style="{StaticResource MutedText}" />
+                <TextBlock Grid.Column="1" Text="Response" Style="{StaticResource MutedText}" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="2" Text="Download" Style="{StaticResource MutedText}" HorizontalAlignment="Right" />
+              </Grid>
+
+              <ItemsControl ItemsSource="{Binding Regions}" Margin="8,0,8,4">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="4" Padding="8,5">
+                      <Border.Style>
+                        <Style TargetType="Border">
+                          <Setter Property="Background" Value="Transparent" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsTesting}" Value="True">
+                              <Setter Property="Background" Value="{DynamicResource SelectionBrush}" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="84" />
+                          <ColumnDefinition Width="92" />
+                          <ColumnDefinition Width="100" />
+                          <ColumnDefinition Width="36" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel>
+                          <TextBlock Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis">
+                            <Run Text="{Binding City, Mode=OneWay}" FontWeight="SemiBold" />
+                            <Run Text="{Binding Place, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}" FontSize="{StaticResource SizeSmall}" />
+                          </TextBlock>
+                          <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis">
+                            <TextBlock.Style>
+                              <Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding HasError}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource AlertBrush}" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </TextBlock.Style>
+                          </TextBlock>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Latency}" Style="{StaticResource NumericText}" />
+                          <TextBlock DataContext="{Binding LatencyChange}" Style="{StaticResource ChangeText}" HorizontalAlignment="Right" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Download}" Style="{StaticResource NumericText}" Foreground="{DynamicResource DownloadBrush}" />
+                          <TextBlock DataContext="{Binding DownloadChange}" Style="{StaticResource ChangeText}" HorizontalAlignment="Right" />
+                        </StackPanel>
+                        <ProgressBar Grid.Column="3" Value="{Binding DownloadFraction, Mode=OneWay}" Margin="14,0,4,0"
+                                     VerticalAlignment="Center" />
+                        <Button Grid.Column="4" Style="{StaticResource IconButton}" Content="&#xE768;"
+                                ToolTip="Test just this region"
+                                Command="{Binding DataContext.TestRegionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </DockPanel>
+          </Border>
+
+          <Border Style="{StaticResource Panel}" Padding="18,14" ui:AdaptiveColumns.Weight="2">
+            <StackPanel>
+              <TextBlock Text="What these connections are good for" Style="{StaticResource HeadingText}" TextWrapping="Wrap" />
+              <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                         Text="Per continent, judged from its quickest server: roughly how calls, streaming and games with services hosted there will feel." />
+              <TextBlock Text="Test the regions to see how far-away services hold up."
+                         Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,8,0,0"
+                         Visibility="{Binding RegionSuitability.Count, Converter={StaticResource ZeroToVisible}}" />
+              <ItemsControl ItemsSource="{Binding RegionSuitability}" ItemTemplate="{StaticResource SuitabilityTemplate}" Margin="0,8,0,0" />
+            </StackPanel>
+          </Border>
+        </ui:AdaptiveColumns>
+
+        <!-- Latest (and, when comparing, previous) result per region. -->
+        <Border Style="{StaticResource Panel}" Height="320" Margin="0,16,0,0">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Margin="16,12,16,4">
+              <TextBlock Text="By region" Style="{StaticResource HeadingText}" />
+              <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0" TextWrapping="Wrap">
+                <Run Text="■" Foreground="{DynamicResource DownloadBrush}" />
+                <Run Text="download (left scale)" />
+                <Run Text="  ●" Foreground="{DynamicResource UploadBrush}" />
+                <Run Text="response time (right scale)" />
+              </TextBlock>
+              <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap"
+                         Text="Faded bars and hollow dots are each region's previous test."
+                         Visibility="{Binding CompareRegions, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <lvc:CartesianChart Margin="8,0,8,8"
+                                Series="{Binding RegionSeries}"
+                                XAxes="{Binding RegionXAxes}"
+                                YAxes="{Binding RegionYAxes}"
+                                LegendPosition="Hidden"
+                                TooltipPosition="Top"
+                                TooltipTextPaint="{Binding TooltipTextPaint}"
+                                TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}" />
+          </DockPanel>
+        </Border>
+
+        <Border Style="{StaticResource Panel}" Height="340" Margin="0,16,0,0">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Margin="16,12,16,4">
+              <TextBlock Text="Past regional tests" Style="{StaticResource HeadingText}" />
+              <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0" Text="Every region result, newest first." />
+            </StackPanel>
+            <DataGrid ItemsSource="{Binding RegionHistory}" Margin="8,0,8,8" RowStyle="{StaticResource ProblemRow}">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="When" Binding="{Binding When}" Width="130" />
+                <DataGridTextColumn Header="Server" Binding="{Binding City}" Width="130" />
+                <DataGridTextColumn Header="Response" Binding="{Binding Latency}" Width="80" ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="Download" Binding="{Binding Download}" Width="90" ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="Network or problem" Binding="{Binding Note}" Width="*" />
+              </DataGrid.Columns>
+            </DataGrid>
+          </DockPanel>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

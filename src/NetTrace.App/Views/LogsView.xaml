@@ -1,0 +1,133 @@
+<UserControl x:Class="NetTrace.App.Views.LogsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:NetTrace.App.Converters"
+             xmlns:ui="clr-namespace:NetTrace.App.Controls">
+
+  <UserControl.Resources>
+    <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+
+    <Style x:Key="HelpHeading" TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,0,0,3" />
+    </Style>
+
+    <Style x:Key="HelpText" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="LineHeight" Value="17" />
+    </Style>
+  </UserControl.Resources>
+
+  <!-- Fills the window; on a short one the page scrolls so the log never shrinks to a sliver. -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto" FocusVisualStyle="{x:Null}">
+  <Grid Margin="{StaticResource PagePadding}" MinHeight="460" ui:Layout.FillViewport="True">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" MinHeight="260" />
+    </Grid.RowDefinitions>
+
+    <!-- ======================================================== what this page is -->
+    <Border Grid.Row="0" Style="{StaticResource Panel}" Padding="20,16" Margin="0,0,0,14"
+            Visibility="{Binding ShowHelp, Converter={StaticResource BoolToVisibility}}">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel>
+          <TextBlock Text="What the Connections page shows" Style="{StaticResource HeadingText}" />
+          <TextBlock Style="{StaticResource HelpText}" Margin="0,4,0,0"
+                     Text="Every program that talks over the network does it through connections. This page is a running log of them: a line each time a program on this PC opens one or closes one, with who it was talking to. It answers questions like 'what is this app connecting to?' and 'what started talking to the internet at 10:42?'." />
+        </StackPanel>
+        <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Hide this explanation"
+                Command="{Binding ToggleHelpCommand}" VerticalAlignment="Top" />
+
+        <ui:AdaptiveGrid Grid.Row="1" Grid.ColumnSpan="2" MinItemWidth="240" MaxColumns="3" Spacing="20" Margin="0,14,0,0">
+          <StackPanel>
+            <TextBlock Text="How it works" Style="{StaticResource HelpHeading}" />
+            <TextBlock Style="{StaticResource HelpText}"
+                       Text="Every 5 seconds NetTrace reads Windows' connection table, the same list netstat shows, and compares it with the previous read. New entries are logged as Opened, vanished ones as Closed. No packets are captured and no administrator rights are needed. A connection that opens and closes between two reads is not seen." />
+          </StackPanel>
+          <StackPanel>
+            <TextBlock Text="Reading a line" Style="{StaticResource HelpHeading}" />
+            <TextBlock Style="{StaticResource HelpText}"
+                       Text="Process and PID are the program and its instance. TCP connections have a remote address and port, the other end; UDP has no fixed partner, so it only shows the local port. Service names the port's usual purpose, 443 being ordinary encrypted web traffic. State: Established is in use, Listen waits for incoming connections, TimeWait and CloseWait are closing." />
+          </StackPanel>
+          <StackPanel>
+            <TextBlock Text="Good to know" Style="{StaticResource HelpHeading}" />
+            <TextBlock Style="{StaticResource HelpText}"
+                       Text="Connections carry no byte counts here; Live and Trends show who used the data. Browsers and Teams keep dozens of connections open, which is normal. Through a VPN or security proxy, many remote addresses are the proxy's own. Type a program, address or port in the filter to narrow the list. The log keeps 14 days." />
+          </StackPanel>
+        </ui:AdaptiveGrid>
+      </Grid>
+    </Border>
+
+    <!-- ======================================================== toolbar -->
+    <Grid Grid.Row="1" Margin="0,0,0,6">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+
+      <WrapPanel>
+        <TextBox Width="320" Margin="0,0,12,8" Tag="Filter by program, PID, address, port or service"
+                 Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged, Delay=200}" />
+        <ComboBox ItemsSource="{Binding ProtocolOptions}" SelectedItem="{Binding ProtocolFilter}"
+                  Width="100" Margin="0,0,12,8" />
+        <CheckBox Content="Follow new events" IsChecked="{Binding IsLiveTailing}"
+                  VerticalAlignment="Center" Margin="0,0,16,8" />
+        <Button Content="Reload from disk" Command="{Binding LoadHistoryCommand}" Margin="0,0,8,8" />
+        <Button Content="Clear view" Command="{Binding ClearViewCommand}" Margin="0,0,8,8" />
+      </WrapPanel>
+
+      <Button Grid.Column="1" Content="What is this page?" Command="{Binding ToggleHelpCommand}" VerticalAlignment="Top"
+              Visibility="{Binding ShowHelp, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}" />
+    </Grid>
+
+    <!-- ======================================================== log -->
+    <Border Grid.Row="2" Style="{StaticResource Panel}">
+      <DataGrid ItemsSource="{Binding Events}" Margin="8" CanUserSortColumns="True"
+                VirtualizingPanel.IsVirtualizing="True"
+                VirtualizingPanel.VirtualizationMode="Recycling"
+                ScrollViewer.CanContentScroll="True">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Time" Width="86" MinWidth="86"
+                              Binding="{Binding ObservedLocal, StringFormat='HH:mm:ss'}" />
+          <DataGridTemplateColumn Header="" Width="64" MinWidth="64" SortMemberPath="Kind">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Kind}" FontSize="{StaticResource SizeSmall}">
+                  <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+                      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsOpen}" Value="True">
+                          <Setter Property="Foreground" Value="{DynamicResource DownloadBrush}" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBlock.Style>
+                </TextBlock>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="170" MinWidth="170" />
+          <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="64" MinWidth="64"
+                              ElementStyle="{StaticResource NumericText}" />
+          <DataGridTextColumn Header="Protocol" Binding="{Binding ProtocolName}" Width="70" MinWidth="70" />
+          <DataGridTextColumn Header="Local" Binding="{Binding LocalEndpoint}" Width="170" MinWidth="170" />
+          <DataGridTextColumn Header="Remote" Binding="{Binding RemoteEndpoint}" Width="*" MinWidth="170" />
+          <DataGridTextColumn Header="Service" Binding="{Binding Service}" Width="150" MinWidth="150" />
+          <DataGridTextColumn Header="State" Binding="{Binding State}" Width="100" MinWidth="100" />
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+  </Grid>
+  </ScrollViewer>
+</UserControl>

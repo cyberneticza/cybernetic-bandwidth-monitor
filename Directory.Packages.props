@@ -1,0 +1,23 @@
+<Project>
+  <PropertyGroup>
+    <!-- Bump these to whatever is current when you restore. Versions below are the
+         expected .NET 10 GA wave; run `dotnet list package` with the outdated switch after first restore.
+         (No double hyphens in here: XML comments cannot contain them, and MSBuild silently
+         skips an invalid Directory.Packages.props.) -->
+    <ExtensionsVersion>10.0.12</ExtensionsVersion>
+    <EfCoreVersion>10.0.12</EfCoreVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="$(ExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="$(ExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(ExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="$(EfCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(EfCoreVersion)" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
+    <PackageVersion Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc5.4" />
+  </ItemGroup>
+</Project>

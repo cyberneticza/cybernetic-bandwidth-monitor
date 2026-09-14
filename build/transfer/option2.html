@@ -1,0 +1,171 @@
+<title>NetTrace Option 2 - Install for the current user</title>
+<style>{{CSS}}</style>
+
+<header class="cover">
+  <div class="kicker">NetTrace install guide · Option 2</div>
+  <h1>Install for the current user</h1>
+  <div class="meta">NetTrace {{VERSION}} · Package <code>Option2-Install</code> · Prepared {{DATE}}</div>
+</header>
+
+<p>NetTrace shows which applications use your network, how good your connection is, and how fast it is. In this option
+an install script sets NetTrace up properly for the signed-in user: it copies the program to
+<code>%LocalAppData%\Programs\NetTrace</code>, adds a Start Menu shortcut, adds NetTrace to <strong>Settings › Apps</strong>
+so it can be uninstalled from there, and can start it when you sign in. No administrator rights are needed and nothing is
+installed for other users.</p>
+
+<h2>Before you start</h2>
+<table>
+  <tr><th style="width:30%">Requirement</th><th>Detail</th></tr>
+  <tr><td>Windows</td><td>Windows 10 version 2004 or later, or Windows 11, 64-bit (x64).</td></tr>
+  <tr><td>Account</td><td>A standard user account is enough. No administrator rights are needed.</td></tr>
+  <tr><td>.NET</td><td>Not needed. The runtime is built into <code>NetTrace.exe</code>.</td></tr>
+  <tr><td>PowerShell 7</td><td><strong>Required</strong> to run the install script (<code>pwsh</code>). The built-in Windows
+    PowerShell 5.1 cannot run it. Step 1 shows how to check, and how to install it if it is missing.</td></tr>
+  <tr><td>Disk space</td><td>About 120 MB for the program, plus the history it collects (usually a few MB a month).</td></tr>
+</table>
+
+<h3>What is in this package</h3>
+<table>
+  <tr><th style="width:40%">File</th><th>Purpose</th></tr>
+  <tr><td><code>app\NetTrace.exe</code></td><td>The whole application.</td></tr>
+  <tr><td><code>app\appsettings.json</code></td><td>Optional tuning (sampling, retention, quality checks).</td></tr>
+  <tr><td><code>install-peruser.ps1</code></td><td>Installs NetTrace for the current user.</td></tr>
+  <tr><td><code>uninstall-peruser.ps1</code></td><td>Removes it again. The installer also copies this next to the program.</td></tr>
+  <tr><td><code>NetTrace-Option2-Install-Guide.pdf</code></td><td>This guide. Not needed on the device.</td></tr>
+</table>
+
+<h3>What the installer changes</h3>
+<table>
+  <tr><th style="width:40%">Where</th><th>What</th></tr>
+  <tr><td><code>%LocalAppData%\Programs\NetTrace</code></td><td>The program, its settings file and the uninstall script.</td></tr>
+  <tr><td>Start Menu</td><td>A <strong>NetTrace</strong> shortcut.</td></tr>
+  <tr><td><code>HKCU\...\Uninstall\NetTrace</code></td><td>The entry under Settings › Apps.</td></tr>
+  <tr><td><code>HKCU\...\Run</code> (only with <code>-Autostart</code>)</td><td>Starts NetTrace in the tray when you sign in.</td></tr>
+  <tr><td><code>%LocalAppData%\NetTrace</code></td><td>Created by NetTrace on first start: history database, preferences and logs.</td></tr>
+</table>
+
+<h2>Install</h2>
+<p>Run the commands in a PowerShell window as your normal user (not "Run as administrator").</p>
+
+<div class="step"><div class="n">1</div><div>
+  <h3>Make sure PowerShell 7 is installed</h3>
+<pre><code>pwsh -v</code></pre>
+  <p>If this prints <code>PowerShell 7.x</code>, go to step 2. Otherwise follow <strong>Installing PowerShell 7</strong> at the
+  end of this guide, then come back.</p>
+</div></div>
+
+<div class="step"><div class="n">2</div><div>
+  <h3>Copy the package to the device</h3>
+  <p>Copy the whole <code>Option2-Install</code> folder to the device (keep the <code>app</code> subfolder inside it), for
+  example into your Downloads folder. Then tell PowerShell where it is. Change the path if you copied it somewhere else:</p>
+<pre><code>$source = "$env:USERPROFILE\Downloads\Option2-Install"</code></pre>
+</div></div>
+
+<div class="step"><div class="n">3</div><div>
+  <h3>Unblock the files</h3>
+  <p>Files that arrived by browser, email or Teams are marked as "downloaded from the internet". That mark makes
+  PowerShell refuse the scripts and SmartScreen stop the program. Remove it:</p>
+<pre><code>Get-ChildItem $source -Recurse | Unblock-File</code></pre>
+</div></div>
+
+<div class="step"><div class="n">4</div><div>
+  <h3>Run the installer</h3>
+  <p>To install and start NetTrace automatically when you sign in (recommended):</p>
+<pre><code>pwsh -NoProfile -ExecutionPolicy Bypass `
+    -File "$source\install-peruser.ps1" -SourcePath "$source\app" -Autostart</code></pre>
+  <p>To install without starting at sign-in, leave out <code>-Autostart</code>:</p>
+<pre><code>pwsh -NoProfile -ExecutionPolicy Bypass `
+    -File "$source\install-peruser.ps1" -SourcePath "$source\app"</code></pre>
+  <p><code>-ExecutionPolicy Bypass</code> applies to this one command only; it does not change the device's policy. The
+  installer finishes with <em>"Installed. Launch it from the Start Menu…"</em>.</p>
+</div></div>
+
+<div class="step"><div class="n">5</div><div>
+  <h3>Start NetTrace</h3>
+  <p>Open <strong>Start › NetTrace</strong>, or run:</p>
+<pre><code>Start-Process "$env:LOCALAPPDATA\Programs\NetTrace\NetTrace.exe"</code></pre>
+  <p>A NetTrace icon appears in the system tray (click <strong>^</strong> next to the clock if it is hidden). Closing the
+  window keeps NetTrace running in the tray; right-click the tray icon › <strong>Exit NetTrace</strong> to stop it.</p>
+</div></div>
+
+<div class="step"><div class="n">6</div><div>
+  <h3>Optional: record from Windows startup</h3>
+  <p>To record even before anyone signs in, or while NetTrace is closed, open <strong>Settings › Running in the
+  background</strong> in NetTrace and select <strong>Install service</strong>. This needs administrator approval once,
+  and moves the history to <code>C:\ProgramData\NetTrace</code>. Start at sign-in can be switched on or off there too.</p>
+</div></div>
+
+<h3>Check the installation</h3>
+<pre><code>Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\NetTrace' |
+    Select-Object DisplayName, DisplayVersion, InstallLocation
+Get-Process NetTrace | Select-Object Id, Path, StartTime</code></pre>
+
+<h2>Upgrade to a newer version</h2>
+<p>Exit NetTrace first (right-click the tray icon › <strong>Exit NetTrace</strong>); a running copy locks the program file.
+Copy the new <code>Option2-Install</code> folder to the device, then repeat steps 2 to 4:</p>
+<pre><code>Stop-Process -Name NetTrace -Force -ErrorAction SilentlyContinue
+$source = "$env:USERPROFILE\Downloads\Option2-Install"
+Get-ChildItem $source -Recurse | Unblock-File
+pwsh -NoProfile -ExecutionPolicy Bypass `
+    -File "$source\install-peruser.ps1" -SourcePath "$source\app" -Autostart</code></pre>
+<p>Your history is kept; the database upgrades itself on first start.</p>
+
+<h2 class="page-break">Uninstall</h2>
+
+<div class="note">
+  <strong>Installed the Windows service?</strong>
+  Remove it first: in NetTrace, open <strong>Settings › Running in the background</strong> and select
+  <strong>Remove service</strong>. The uninstall script stops without changing anything while the service is installed.
+</div>
+
+<h3>Method A: from Windows Settings</h3>
+<ol>
+  <li>Open <strong>Settings › Apps › Installed apps</strong> (Windows 10: <strong>Settings › Apps › Apps &amp; features</strong>).</li>
+  <li>Find <strong>NetTrace</strong>, select <strong>…</strong> › <strong>Uninstall</strong>, and confirm.</li>
+</ol>
+<p>This stops NetTrace, removes the program, the shortcut, the sign-in entry <strong>and the collected history</strong>.
+To keep the history, use method B with <code>-KeepData</code>.</p>
+
+<h3>Method B: from PowerShell</h3>
+<p>Remove NetTrace and its collected history:</p>
+<pre><code>pwsh -NoProfile -ExecutionPolicy Bypass `
+    -File "$env:LOCALAPPDATA\Programs\NetTrace\uninstall-peruser.ps1"</code></pre>
+<p>Remove NetTrace but keep the history in <code>%LocalAppData%\NetTrace</code> for a later reinstall:</p>
+<pre><code>pwsh -NoProfile -ExecutionPolicy Bypass `
+    -File "$env:LOCALAPPDATA\Programs\NetTrace\uninstall-peruser.ps1" -KeepData</code></pre>
+<div class="note">
+  <strong>No PowerShell 7 any more?</strong>
+  The uninstall script also runs in the built-in Windows PowerShell: replace <code>pwsh</code> with <code>powershell</code>
+  in the commands above. Keep the <code>`</code> at the end of the first line: it continues the command on the next line.
+</div>
+
+<h3>Check that it is gone</h3>
+<pre><code>Test-Path "$env:LOCALAPPDATA\Programs\NetTrace"     <span class="c"># False when removed</span>
+Test-Path "$env:LOCALAPPDATA\NetTrace"              <span class="c"># False unless you used -KeepData</span>
+Get-Process NetTrace -ErrorAction SilentlyContinue <span class="c"># prints nothing</span></code></pre>
+
+<h2>Troubleshooting</h2>
+<table>
+  <tr><th style="width:38%">What you see</th><th>What to do</th></tr>
+  <tr><td><em>"The term 'pwsh' is not recognized"</em></td><td>PowerShell 7 is not installed, or the window was opened before it
+    was. Install it (see the next page), then open a new PowerShell window.</td></tr>
+  <tr><td>Red parse error mentioning <code>??</code> in <code>install-peruser.ps1</code></td><td>The script was run with Windows
+    PowerShell (<code>powershell</code>). Use <code>pwsh</code> as shown in step 4.</td></tr>
+  <tr><td><em>"running scripts is disabled on this system"</em> or <em>"is not digitally signed"</em></td><td>Run step 3
+    (Unblock-File) and keep <code>-ExecutionPolicy Bypass</code> in the command. If a company policy still blocks it, ask
+    IT, or use Option 1, which runs no scripts.</td></tr>
+  <tr><td><em>"Nothing to install at …"</em></td><td><code>-SourcePath</code> does not point at the <code>app</code> folder.
+    Check <code>$source</code> and that <code>$source\app\NetTrace.exe</code> exists.</td></tr>
+  <tr><td>Install fails to copy <code>NetTrace.exe</code></td><td>NetTrace is still running. Exit it from the tray, then install again.</td></tr>
+  <tr><td>"Windows protected your PC"</td><td>Run step 3 again, or click <strong>More info › Run anyway</strong>. NetTrace is not
+    code-signed, so SmartScreen does not recognise it.</td></tr>
+  <tr><td>Antivirus or company security tool blocks NetTrace</td><td>NetTrace reads per-application network usage and the
+    connection list, which security tools can flag. On a work device, ask IT to allow it.</td></tr>
+  <tr><td>Anything else</td><td>Logs are in <code>%LocalAppData%\NetTrace\logs</code>. NetTrace's Settings and About pages both open the folder.</td></tr>
+</table>
+
+<h2 class="page-break">Installing PowerShell 7</h2>
+<p>Needed for step 4 of the install. Run these commands in the built-in <strong>Windows PowerShell</strong>.</p>
+{{PWSH}}
+
+<footer>NetTrace {{VERSION}} by Lance du Plessis · Option 2: Install for the current user</footer>

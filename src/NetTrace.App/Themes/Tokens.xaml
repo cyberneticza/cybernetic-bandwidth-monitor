@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+  <!--
+    Type, shape and spacing only. Colours live in Dark.xaml and Light.xaml, which carry the same keys
+    and are swapped at runtime by ThemeService; that is why every colour lookup in the app is a
+    DynamicResource and everything here can stay static.
+  -->
+
+  <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+  <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
+  <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+  <!-- Hero: the one or two numbers a page is about. Display: large readings. Title: page names. -->
+  <sys:Double x:Key="SizeHero">34</sys:Double>
+  <sys:Double x:Key="SizeDisplay">30</sys:Double>
+  <sys:Double x:Key="SizePageTitle">24</sys:Double>
+  <sys:Double x:Key="SizeTitle">22</sys:Double>
+  <sys:Double x:Key="SizeHeading">16</sys:Double>
+  <sys:Double x:Key="SizeBody">13</sys:Double>
+  <sys:Double x:Key="SizeSmall">12</sys:Double>
+
+  <!-- Cards are softer than controls: nested corners read as intentional, not accidental. -->
+  <CornerRadius x:Key="CardRadius">10</CornerRadius>
+  <CornerRadius x:Key="ControlRadius">6</CornerRadius>
+
+  <!-- Space around a page's content, and between the cards on it. -->
+  <Thickness x:Key="PagePadding">28,4,28,28</Thickness>
+  <sys:Double x:Key="CardGap">16</sys:Double>
+
+</ResourceDictionary>
