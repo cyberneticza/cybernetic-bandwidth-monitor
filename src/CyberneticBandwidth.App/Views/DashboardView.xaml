@@ -1,0 +1,287 @@
+<UserControl x:Class="CyberneticBandwidth.App.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:CyberneticBandwidth.App.Converters"
+             xmlns:ui="clr-namespace:CyberneticBandwidth.App.Controls"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF">
+
+  <UserControl.Resources>
+    <conv:BytesConverter x:Key="Bytes" />
+    <conv:RateConverter x:Key="Rate" />
+    <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
+  </UserControl.Resources>
+
+  <!-- Wide: fills the window, the chart and tables sharing its height. Narrow or short: scrolls. -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto" FocusVisualStyle="{x:Null}">
+    <Grid Margin="{StaticResource PagePadding}" MinHeight="600"
+          ui:Layout.CompactBelow="720" ui:Layout.FillViewport="True">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="16" />
+        <RowDefinition Height="2*" MinHeight="200" />
+        <RowDefinition Height="16" />
+        <RowDefinition Height="3*" MinHeight="240" />
+      </Grid.RowDefinitions>
+
+      <!-- ======================================================== now -->
+      <!-- Cool is inbound, warm is outbound. That pairing holds everywhere in the app. -->
+      <ui:AdaptiveGrid Grid.Row="0" MinItemWidth="200" MaxColumns="4" Spacing="16">
+
+        <Border Style="{StaticResource Panel}" Padding="18,16">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource IconBadge}" Background="{DynamicResource DownloadSoftBrush}">
+              <TextBlock Text="&#xE74B;" Style="{StaticResource IconBadgeGlyph}" Foreground="{DynamicResource DownloadBrush}" />
+            </Border>
+            <StackPanel Grid.Column="1" Margin="14,0,0,0">
+              <Grid>
+                <TextBlock Text="Downloading" Style="{StaticResource EyebrowText}" />
+                <!-- A slow pulse: this card is live. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                  <Ellipse Width="7" Height="7" Fill="{DynamicResource DownloadBrush}" VerticalAlignment="Center">
+                    <Ellipse.Triggers>
+                      <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                          <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.25" Duration="0:0:1.1" />
+                          </Storyboard>
+                        </BeginStoryboard>
+                      </EventTrigger>
+                    </Ellipse.Triggers>
+                  </Ellipse>
+                  <TextBlock Text="LIVE" Style="{StaticResource MutedText}" FontSize="10" FontWeight="SemiBold" Margin="5,0,0,0" />
+                </StackPanel>
+              </Grid>
+              <TextBlock Text="{Binding DownloadBytesPerSecond, Converter={StaticResource Rate}}"
+                         Style="{StaticResource HeroNumber}" Foreground="{DynamicResource DownloadBrush}" Margin="0,2,0,0" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Style="{StaticResource Panel}" Padding="18,16">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource IconBadge}" Background="{DynamicResource UploadSoftBrush}">
+              <TextBlock Text="&#xE74A;" Style="{StaticResource IconBadgeGlyph}" Foreground="{DynamicResource UploadBrush}" />
+            </Border>
+            <StackPanel Grid.Column="1" Margin="14,0,0,0">
+              <TextBlock Text="Uploading" Style="{StaticResource EyebrowText}" />
+              <TextBlock Text="{Binding UploadBytesPerSecond, Converter={StaticResource Rate}}"
+                         Style="{StaticResource HeroNumber}" Foreground="{DynamicResource UploadBrush}" Margin="0,2,0,0" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- How much has moved today, all applications, since local midnight. -->
+        <Border Style="{StaticResource Panel}" Padding="18,16">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource IconBadge}" Background="{DynamicResource RaisedBrush}">
+              <TextBlock Text="&#xE787;" Style="{StaticResource IconBadgeGlyph}" Foreground="{DynamicResource TextBrush}" />
+            </Border>
+            <StackPanel Grid.Column="1" Margin="14,0,0,0">
+              <TextBlock Text="Today" Style="{StaticResource EyebrowText}" />
+              <WrapPanel Margin="0,4,0,0">
+                <TextBlock Margin="0,0,14,0" ToolTip="Downloaded since midnight" Style="{StaticResource BodyText}"
+                           FontFamily="{StaticResource DisplayFont}" FontSize="{StaticResource SizeTitle}" FontWeight="SemiBold"
+                           Typography.NumeralAlignment="Tabular">
+                  <Run Text="&#xE74B;" FontFamily="{StaticResource IconFont}" FontSize="14" Foreground="{DynamicResource DownloadBrush}" />
+                  <Run Text="{Binding TodayBytesReceived, Converter={StaticResource Bytes}, Mode=OneWay}" />
+                </TextBlock>
+                <TextBlock ToolTip="Uploaded since midnight" Style="{StaticResource BodyText}"
+                           FontFamily="{StaticResource DisplayFont}" FontSize="{StaticResource SizeTitle}" FontWeight="SemiBold"
+                           Typography.NumeralAlignment="Tabular">
+                  <Run Text="&#xE74A;" FontFamily="{StaticResource IconFont}" FontSize="14" Foreground="{DynamicResource UploadBrush}" />
+                  <Run Text="{Binding TodayBytesSent, Converter={StaticResource Bytes}, Mode=OneWay}" />
+                </TextBlock>
+              </WrapPanel>
+
+              <!-- Budgets from Settings: a bar per budget, only when one is set. -->
+              <StackPanel Margin="0,8,0,0" Visibility="{Binding DailyBudgetText, Converter={StaticResource NullToVisibility}}">
+                <ProgressBar Value="{Binding DailyBudgetFraction, Mode=OneWay}" Height="4" />
+                <TextBlock Text="{Binding DailyBudgetText}" Style="{StaticResource MutedText}" Margin="0,3,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+              <StackPanel Margin="0,6,0,0" Visibility="{Binding MonthlyBudgetText, Converter={StaticResource NullToVisibility}}">
+                <ProgressBar Value="{Binding MonthlyBudgetFraction, Mode=OneWay}" Height="4" Foreground="{DynamicResource UploadBrush}" />
+                <TextBlock Text="{Binding MonthlyBudgetText}" Style="{StaticResource MutedText}" Margin="0,3,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Style="{StaticResource Panel}" Padding="18,16">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource IconBadge}" Background="{DynamicResource RaisedBrush}">
+              <TextBlock Text="&#xE9D5;" Style="{StaticResource IconBadgeGlyph}" Foreground="{DynamicResource TextBrush}" />
+            </Border>
+            <StackPanel Grid.Column="1" Margin="14,0,0,0">
+              <TextBlock Text="Open sockets" Style="{StaticResource EyebrowText}" />
+              <TextBlock Text="{Binding ActiveSocketCount}" Style="{StaticResource HeroNumber}" Margin="0,2,0,0" />
+              <TextBlock Style="{StaticResource MutedText}" Margin="0,-2,0,0">
+                <Run Text="across" />
+                <Run Text="{Binding ProcessCount, Mode=OneWay}" />
+                <Run Text="processes" />
+              </TextBlock>
+            </StackPanel>
+          </Grid>
+        </Border>
+      </ui:AdaptiveGrid>
+
+      <!-- ======================================================== throughput and connection -->
+      <ui:AdaptiveColumns Grid.Row="2">
+        <Border Style="{StaticResource Panel}" ui:AdaptiveColumns.StackedHeight="260">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" Margin="18,14,18,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="Throughput" Style="{StaticResource HeadingText}" />
+                <TextBlock Text="The last five minutes, second by second" Style="{StaticResource MutedText}" Margin="0,1,0,0" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,4,0,0">
+                <Ellipse Width="8" Height="8" Fill="{DynamicResource DownloadBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="down, above" Style="{StaticResource MutedText}" Margin="6,0,14,0" />
+                <Ellipse Width="8" Height="8" Fill="{DynamicResource UploadBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="up, below" Style="{StaticResource MutedText}" Margin="6,0,0,0" />
+              </StackPanel>
+            </Grid>
+            <lvc:CartesianChart Margin="8,4,12,8"
+                                Series="{Binding ThroughputSeries}"
+                                XAxes="{Binding ThroughputXAxes}"
+                                YAxes="{Binding ThroughputYAxes}"
+                                LegendPosition="Hidden"
+                                TooltipPosition="Top"
+                                TooltipTextPaint="{Binding TooltipTextPaint}"
+                                TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}"
+                                ZoomMode="None" />
+          </DockPanel>
+        </Border>
+
+        <!-- Your connection: what it is and whether it is working, one click from the details. -->
+        <Border Style="{StaticResource Panel}" Padding="18,14" ui:AdaptiveColumns.FixedWidth="320">
+          <DockPanel>
+            <Button DockPanel.Dock="Bottom" HorizontalAlignment="Left" Padding="12,6" Margin="0,10,0,0"
+                    Command="{Binding OpenNetworkCommand}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Network details" VerticalAlignment="Center" />
+                <TextBlock Text="&#xE76C;" Style="{StaticResource IconText}" FontSize="10" Margin="8,1,0,0" />
+              </StackPanel>
+            </Button>
+
+            <StackPanel>
+              <TextBlock Text="Your connection" Style="{StaticResource EyebrowText}" />
+              <Grid Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource IconBadge}" Width="34" Height="34" Background="{DynamicResource DownloadSoftBrush}">
+                  <TextBlock Text="{Binding ConnectionGlyph}" Style="{StaticResource IconBadgeGlyph}" FontSize="15" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding ConnectionName}" Style="{StaticResource HeadingText}" TextTrimming="CharacterEllipsis"
+                             ToolTip="{Binding ConnectionName}" />
+                  <TextBlock Text="{Binding ConnectionDetail}" Style="{StaticResource MutedText}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Grid>
+
+              <!-- Quality as a pill, coloured by status. -->
+              <Border HorizontalAlignment="Left" CornerRadius="11" Padding="10,3" Margin="0,12,0,0" Background="{DynamicResource RaisedBrush}">
+                <TextBlock FontWeight="SemiBold" Style="{StaticResource HealthStatusText}">
+                  <Run Text="●" />
+                  <Run Text="{Binding HealthText, Mode=OneWay}" />
+                </TextBlock>
+              </Border>
+              <TextBlock Text="{Binding HealthMeaning}" Style="{StaticResource MutedText}" TextWrapping="Wrap"
+                         Margin="0,6,0,0" MaxHeight="34" TextTrimming="WordEllipsis" ToolTip="{Binding HealthMeaning}" />
+              <TextBlock Style="{StaticResource MutedText}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"
+                         Visibility="{Binding RoutesText, Converter={StaticResource NullToVisibility}}">
+                <Run Text="&#xE72E;" FontFamily="{StaticResource IconFont}" />
+                <Run Text="{Binding RoutesText, Mode=OneWay}" />
+              </TextBlock>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+      </ui:AdaptiveColumns>
+
+      <!-- ======================================================== applications and sockets -->
+      <!-- Left and right are measured differently and are labelled as such. Byte counts are
+           attributed by Windows to applications; sockets are owned by processes. Joining the two
+           would look tidier and be wrong. -->
+      <ui:AdaptiveColumns Grid.Row="4">
+        <Border Style="{StaticResource Panel}" ui:AdaptiveColumns.Weight="2" ui:AdaptiveColumns.StackedHeight="420">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Margin="18,14,18,8">
+              <TextBlock Text="Traffic by application" Style="{StaticResource HeadingText}" />
+              <TextBlock Text="Measured by Windows since this session started. Updates each minute."
+                         Style="{StaticResource MutedText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <DataGrid ItemsSource="{Binding Apps}" Margin="8,0,8,8" CanUserSortColumns="True">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Application" Binding="{Binding DisplayName}" Width="2*" MinWidth="140" />
+                <DataGridTextColumn Header="Down" Width="*" MinWidth="70" SortMemberPath="BytesReceived"
+                                    Binding="{Binding BytesReceived, Converter={StaticResource Bytes}}"
+                                    ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="Up" Width="*" MinWidth="70" SortMemberPath="BytesSent"
+                                    Binding="{Binding BytesSent, Converter={StaticResource Bytes}}"
+                                    ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="Last minute" Width="*" MinWidth="80" SortMemberPath="RecentBytesPerSecond"
+                                    Binding="{Binding RecentBytesPerSecond, Converter={StaticResource Rate}}"
+                                    ElementStyle="{StaticResource NumericText}" />
+              </DataGrid.Columns>
+            </DataGrid>
+          </DockPanel>
+        </Border>
+
+        <Border Style="{StaticResource Panel}" ui:AdaptiveColumns.StackedHeight="380">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Margin="18,14,18,8">
+              <TextBlock Text="Open sockets" Style="{StaticResource HeadingText}" />
+              <TextBlock Text="Live from the connection table, by process."
+                         Style="{StaticResource MutedText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <DataGrid ItemsSource="{Binding Sockets}" Margin="8,0,8,8" CanUserSortColumns="True">
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Process" Width="*" MinWidth="120" SortMemberPath="ProcessName">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal">
+                        <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,8,0"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{Binding ProcessName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding ProcessName}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="58"
+                                    ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="Live" Binding="{Binding EstablishedCount}" Width="46"
+                                    ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="All" Binding="{Binding Total}" Width="46"
+                                    ElementStyle="{StaticResource NumericText}" />
+              </DataGrid.Columns>
+            </DataGrid>
+          </DockPanel>
+        </Border>
+      </ui:AdaptiveColumns>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

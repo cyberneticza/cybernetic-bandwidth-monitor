@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Publishes NetTrace as a self-contained, single-file x64 build.
+    Publishes Cybernetic Bandwidth Monitor as a self-contained, single-file x64 build.
 
 .DESCRIPTION
     Self-contained by default so the target machine does not need the .NET 10 Desktop Runtime
@@ -19,7 +19,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$project = Join-Path $PSScriptRoot '..\src\NetTrace.App\NetTrace.App.csproj'
+$project = Join-Path $PSScriptRoot '..\src\CyberneticBandwidth.App\CyberneticBandwidth.App.csproj'
 
 $arguments = @(
     'publish', $project,

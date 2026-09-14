@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-    Builds the transfer packages for putting NetTrace on another device.
+    Builds the transfer packages for putting Cybernetic Bandwidth Monitor on another device.
 
 .DESCRIPTION
-    Creates artifacts\transfer with one folder per way of putting NetTrace on a device, each holding
+    Creates artifacts\transfer with one folder per way of putting Cybernetic Bandwidth Monitor on a device, each holding
     every file that option needs plus its install guide as a PDF:
 
-      Option1-Portable   NetTrace.exe and appsettings.json to copy anywhere and run.
+      Option1-Portable   CyberneticBandwidth.exe and appsettings.json to copy anywhere and run.
       Option2-Install    app\ with the same files, plus the per-user install and uninstall scripts.
 
     The guides are HTML templates in build\transfer, printed to PDF with Microsoft Edge in headless
@@ -25,7 +25,7 @@ $templates = Join-Path $PSScriptRoot 'transfer'
 if (-not $SkipPublish) {
     & (Join-Path $PSScriptRoot 'publish-portable.ps1')
 }
-if (-not (Test-Path (Join-Path $portable 'NetTrace.exe'))) {
+if (-not (Test-Path (Join-Path $portable 'CyberneticBandwidth.exe'))) {
     throw "No published build at $portable. Run publish-portable.ps1 first, or drop -SkipPublish."
 }
 
@@ -35,7 +35,7 @@ $edge = @(
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $edge) { throw 'Microsoft Edge was not found; it is needed to print the guides to PDF.' }
 
-$version = (Get-Item (Join-Path $portable 'NetTrace.exe')).VersionInfo.ProductVersion -replace '\+.*$', ''
+$version = (Get-Item (Join-Path $portable 'CyberneticBandwidth.exe')).VersionInfo.ProductVersion -replace '\+.*$', ''
 $date = Get-Date -Format 'd MMMM yyyy'
 
 # Start clean so files dropped from a package do not linger in it.
@@ -46,7 +46,7 @@ $option2App = New-Item -ItemType Directory -Force -Path (Join-Path $option2 'app
 
 # The exe and its settings are all the app needs; the .pdb debugging symbols stay behind.
 foreach ($folder in $option1, $option2App) {
-    Copy-Item (Join-Path $portable 'NetTrace.exe') $folder
+    Copy-Item (Join-Path $portable 'CyberneticBandwidth.exe') $folder
     Copy-Item (Join-Path $portable 'appsettings.json') $folder
 }
 Copy-Item (Join-Path $PSScriptRoot 'install-peruser.ps1') $option2
@@ -54,12 +54,12 @@ Copy-Item (Join-Path $PSScriptRoot 'uninstall-peruser.ps1') $option2
 
 $css = Get-Content (Join-Path $templates 'guide.css') -Raw -Encoding UTF8
 $pwsh = Get-Content (Join-Path $templates 'pwsh-section.html') -Raw -Encoding UTF8
-$work = New-Item -ItemType Directory -Force -Path (Join-Path ([IO.Path]::GetTempPath()) ("nettrace-guides-" + [guid]::NewGuid().ToString('N')))
+$work = New-Item -ItemType Directory -Force -Path (Join-Path ([IO.Path]::GetTempPath()) ("cyberneticbandwidth-guides-" + [guid]::NewGuid().ToString('N')))
 
 try {
     $guides = @(
-        @{ Template = 'option1.html'; Pdf = Join-Path $option1 'NetTrace-Option1-Install-Guide.pdf' },
-        @{ Template = 'option2.html'; Pdf = Join-Path $option2 'NetTrace-Option2-Install-Guide.pdf' }
+        @{ Template = 'option1.html'; Pdf = Join-Path $option1 'CyberneticBandwidth-Option1-Install-Guide.pdf' },
+        @{ Template = 'option2.html'; Pdf = Join-Path $option2 'CyberneticBandwidth-Option2-Install-Guide.pdf' }
     )
 
     foreach ($guide in $guides) {
@@ -97,7 +97,7 @@ finally {
     Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host "Transfer packages for NetTrace $version are in $((Resolve-Path $OutputPath).Path)" -ForegroundColor Green
+Write-Host "Transfer packages for Cybernetic Bandwidth Monitor $version are in $((Resolve-Path $OutputPath).Path)" -ForegroundColor Green
 Get-ChildItem $OutputPath -Recurse -File |
     Select-Object @{ n = 'File'; e = { $_.FullName.Substring((Resolve-Path $OutputPath).Path.Length + 1) } },
                   @{ n = 'Size'; e = { '{0:N1} MB' -f ($_.Length / 1MB) } }

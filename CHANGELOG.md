@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to NetTrace. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+All notable changes to Cybernetic Bandwidth Monitor. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versions follow [Semantic Versioning](https://semver.org/): patch for fixes, minor for features,
 major for changes that break the database or the install layout. The version itself lives in
 `VersionPrefix` in `Directory.Build.props`.
@@ -52,9 +52,9 @@ major for changes that break the database or the install layout. The version its
   needs and a PDF install guide with install, upgrade and uninstall steps, the exact commands, and
   how to install PowerShell 7 when it is missing.
 - **Run as a Windows service (optional).** Settings › Running in the background › **Install service**
-  records from Windows startup, whether or not anyone is signed in, and while NetTrace's window is
-  closed. It asks for administrator approval once, copies the program to `%ProgramFiles%\NetTrace`,
-  and moves the history to `%ProgramData%\NetTrace`, where every user of the PC can see it. The window
+  records from Windows startup, whether or not anyone is signed in, and while Cybernetic Bandwidth Monitor's window is
+  closed. It asks for administrator approval once, copies the program to `%ProgramFiles%\CyberneticBandwidth`,
+  and moves the history to `%ProgramData%\CyberneticBandwidth`, where every user of the PC can see it. The window
   then shows the service's data and figures. Settings shows whether the service is running and can
   start it without another prompt, update it to the window's version, or remove it, which brings the
   history back to your own profile. While the service is not answering, a banner says so and the
@@ -62,13 +62,21 @@ major for changes that break the database or the install layout. The version its
 
 ### Changed
 
+- **NetTrace is now Cybernetic Bandwidth Monitor.** The window, tray, Start Menu and Settings › Apps
+  show the new name. The program is `CyberneticBandwidth.exe`, installed to
+  `%LocalAppData%\Programs\CyberneticBandwidth`, and keeps its data in `%LocalAppData%\CyberneticBandwidth`
+  (`cyberneticbandwidth.db`). On its first start it moves the history, preferences and logs over from
+  `%LocalAppData%\NetTrace` and takes over NetTrace's start-at-sign-in entry. `install-peruser.ps1`
+  removes a per-user NetTrace install and stops if NetTrace's Windows service is still installed: remove
+  that from NetTrace's Settings first. The logo is unchanged; the side rail shows the name on two
+  lines, "Cybernetic" over "Bandwidth Monitor".
 - **Start at sign-in uses a scheduled task** (Settings › Running in the background) instead of the
-  `Run` registry key, so NetTrace starts promptly after sign-in and Task Manager's startup list does
+  `Run` registry key, so Cybernetic Bandwidth Monitor starts promptly after sign-in and Task Manager's startup list does
   not switch it off. It still needs no administrator rights. An existing `Run` entry for the same copy
   moves over to the task on the next start, and a task left pointing at a moved program is pointed at
   the copy you start. `uninstall-peruser.ps1` removes the task too, and stops without changing
   anything while the service is installed.
-- On the very first start, while NetTrace reads up to 14 days of history from Windows (a few minutes
+- On the very first start, while Cybernetic Bandwidth Monitor reads up to 14 days of history from Windows (a few minutes
   on a busy machine), a banner explains why the live figures have not started yet.
 
 - **A refreshed design.** Every page has a title and a one-line description, and opens with a short
@@ -174,7 +182,7 @@ The connection itself, not just who uses it.
 
 - The database schema moves to version 2 with three new tables (`NetworkEvents`, `HealthSamples`,
   `SpeedTests`). The upgrade is automatic and keeps existing history.
-- NetTrace now makes network requests of its own, limited to the quality checks and user-started
+- Cybernetic Bandwidth Monitor now makes network requests of its own, limited to the quality checks and user-started
   speed tests. The About page and README say so.
 - Sockets that Windows has handed to PID 0 while they wait out TimeWait are shown as
   "Closing connection" instead of "System Idle".
@@ -188,23 +196,23 @@ The connection itself, not just who uses it.
 
 ## [1.0.0] - 2026-09-14
 
-First versioned release, built on the original NetTrace code.
+First versioned release, built on the original Cybernetic Bandwidth Monitor code.
 
 ### Added
 
-- **System tray.** NetTrace runs in the notification area with live download and upload rates in
+- **System tray.** Cybernetic Bandwidth Monitor runs in the notification area with live download and upload rates in
   the tooltip. Closing the window hides it and collection continues; Exit on the tray menu stops it.
-  Start-with-Windows launches straight to the tray. Starting NetTrace again brings the running copy
+  Start-with-Windows launches straight to the tray. Starting Cybernetic Bandwidth Monitor again brings the running copy
   forward instead of showing an "already running" message.
 - **Light and dark themes.** Follows the Windows app theme by default and switches when Windows
   does; Settings › Appearance and a toggle in the side rail can pin either. Covers the title bar,
   every control and all charts.
 - **Today's total on Live**: download and upload since local midnight, including time before
-  NetTrace started.
+  Cybernetic Bandwidth Monitor started.
 - **Trends redesign.** A daily overview for 7 days to a year that can be zoomed, panned and clicked,
   and a detail chart of the selected day stacked by application at 1, 5 or 15 minutes or hourly,
   with a table of that day's applications to filter the chart.
-- **About page** with what NetTrace does, the author, and version, build, runtime and install
+- **About page** with what Cybernetic Bandwidth Monitor does, the author, and version, build, runtime and install
   details, plus "Copy details".
 - **Application icon** in download and upload colours, generated by `build/make-icon.ps1` and used for
   the exe, window, taskbar, tray, Start Menu shortcut and Settings › Apps entry.

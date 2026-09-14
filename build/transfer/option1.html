@@ -1,13 +1,13 @@
-<title>NetTrace Option 1 - Run portable</title>
+<title>Cybernetic Bandwidth Monitor Option 1 - Run portable</title>
 <style>{{CSS}}</style>
 
 <header class="cover">
-  <div class="kicker">NetTrace install guide · Option 1</div>
+  <div class="kicker">Cybernetic Bandwidth Monitor install guide · Option 1</div>
   <h1>Run portable, no installation</h1>
-  <div class="meta">NetTrace {{VERSION}} · Package <code>Option1-Portable</code> · Prepared {{DATE}}</div>
+  <div class="meta">Cybernetic Bandwidth Monitor {{VERSION}} · Package <code>Option1-Portable</code> · Prepared {{DATE}}</div>
 </header>
 
-<p>NetTrace shows which applications use your network, how good your connection is, and how fast it is. In this option
+<p>Cybernetic Bandwidth Monitor shows which applications use your network, how good your connection is, and how fast it is. In this option
 you copy one program file to a folder and run it. Nothing is registered with Windows: no Start Menu entry and no entry
 under Settings › Apps. If you want those, use Option 2.</p>
 
@@ -16,7 +16,7 @@ under Settings › Apps. If you want those, use Option 2.</p>
   <tr><th style="width:30%">Requirement</th><th>Detail</th></tr>
   <tr><td>Windows</td><td>Windows 10 version 2004 or later, or Windows 11, 64-bit (x64).</td></tr>
   <tr><td>Account</td><td>A standard user account is enough. No administrator rights are needed.</td></tr>
-  <tr><td>.NET</td><td>Not needed. The runtime is built into <code>NetTrace.exe</code>.</td></tr>
+  <tr><td>.NET</td><td>Not needed. The runtime is built into <code>CyberneticBandwidth.exe</code>.</td></tr>
   <tr><td>PowerShell</td><td>The commands in this guide work in the built-in <strong>Windows PowerShell</strong>. PowerShell 7 is
     <em>not</em> required for this option (see the appendix if you want it anyway).</td></tr>
   <tr><td>Disk space</td><td>About 120 MB for the program, plus the history it collects (usually a few MB a month).</td></tr>
@@ -25,15 +25,15 @@ under Settings › Apps. If you want those, use Option 2.</p>
 <h3>What is in this package</h3>
 <table>
   <tr><th style="width:38%">File</th><th>Purpose</th></tr>
-  <tr><td><code>NetTrace.exe</code></td><td>The whole application.</td></tr>
+  <tr><td><code>CyberneticBandwidth.exe</code></td><td>The whole application.</td></tr>
   <tr><td><code>appsettings.json</code></td><td>Optional tuning (sampling, retention, quality checks). Keep it next to the exe.</td></tr>
-  <tr><td><code>NetTrace-Option1-Install-Guide.pdf</code></td><td>This guide. Not needed on the device.</td></tr>
+  <tr><td><code>CyberneticBandwidth-Option1-Install-Guide.pdf</code></td><td>This guide. Not needed on the device.</td></tr>
 </table>
 
 <div class="note">
   <strong>Where the data goes</strong>
   The program can live in any folder, but the history it collects is always stored for the signed-in user in
-  <code>%LocalAppData%\NetTrace</code> (database, preferences and logs).
+  <code>%LocalAppData%\CyberneticBandwidth</code> (database, preferences and logs).
 </div>
 
 <h2>Install</h2>
@@ -42,14 +42,14 @@ under Settings › Apps. If you want those, use Option 2.</p>
 <div class="step"><div class="n">1</div><div>
   <h3>Copy the package to the device</h3>
   <p>Copy the <code>Option1-Portable</code> folder to the device, for example from a USB drive or a network share, into
-  your Downloads folder. Then tell PowerShell where it is and where NetTrace should live. Change the first line if you
+  your Downloads folder. Then tell PowerShell where it is and where Cybernetic Bandwidth Monitor should live. Change the first line if you
   copied it somewhere else:</p>
 <pre><code>$source = "$env:USERPROFILE\Downloads\Option1-Portable"
-$target = "$env:USERPROFILE\Apps\NetTrace"</code></pre>
+$target = "$env:USERPROFILE\Apps\CyberneticBandwidth"</code></pre>
 </div></div>
 
 <div class="step"><div class="n">2</div><div>
-  <h3>Copy NetTrace into its folder</h3>
+  <h3>Copy Cybernetic Bandwidth Monitor into its folder</h3>
 <pre><code>New-Item -ItemType Directory -Force -Path $target | Out-Null
 Copy-Item -Path "$source\*" -Destination $target -Exclude *.pdf -Force</code></pre>
 </div></div>
@@ -62,89 +62,89 @@ Copy-Item -Path "$source\*" -Destination $target -Exclude *.pdf -Force</code></p
 </div></div>
 
 <div class="step"><div class="n">4</div><div>
-  <h3>Start NetTrace</h3>
-<pre><code>Start-Process "$target\NetTrace.exe"</code></pre>
-  <p>The window opens and a NetTrace icon appears in the system tray (click <strong>^</strong> next to the clock if it is
-  hidden). Closing the window keeps NetTrace running in the tray; right-click the tray icon › <strong>Exit NetTrace</strong>
+  <h3>Start Cybernetic Bandwidth Monitor</h3>
+<pre><code>Start-Process "$target\CyberneticBandwidth.exe"</code></pre>
+  <p>The window opens and a Cybernetic Bandwidth Monitor icon appears in the system tray (click <strong>^</strong> next to the clock if it is
+  hidden). Closing the window keeps Cybernetic Bandwidth Monitor running in the tray; right-click the tray icon › <strong>Exit Cybernetic Bandwidth Monitor</strong>
   to stop it.</p>
 </div></div>
 
 <div class="step"><div class="n">5</div><div>
-  <h3>Optional: start NetTrace when you sign in</h3>
-  <p>In NetTrace, open <strong>Settings</strong> and, under <strong>Running in the background</strong>, tick
-  <strong>Start NetTrace when I sign in</strong>. This adds a scheduled task for your account only. Or run the
-  following; NetTrace turns it into the same task the next time it starts:</p>
+  <h3>Optional: start Cybernetic Bandwidth Monitor when you sign in</h3>
+  <p>In Cybernetic Bandwidth Monitor, open <strong>Settings</strong> and, under <strong>Running in the background</strong>, tick
+  <strong>Start Cybernetic Bandwidth Monitor when I sign in</strong>. This adds a scheduled task for your account only. Or run the
+  following; Cybernetic Bandwidth Monitor turns it into the same task the next time it starts:</p>
 <pre><code>Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' `
-    -Name 'NetTrace' -Value "`"$target\NetTrace.exe`" --minimised"</code></pre>
+    -Name 'CyberneticBandwidth' -Value "`"$target\CyberneticBandwidth.exe`" --minimised"</code></pre>
   <p>This remembers the program's current folder, so do not move the folder afterwards.</p>
 </div></div>
 
 <div class="step"><div class="n">6</div><div>
   <h3>Optional: record from Windows startup</h3>
-  <p>To record even before anyone signs in, or while NetTrace is closed, select <strong>Install service</strong> in the
-  same section. This needs administrator approval once, and moves the history to <code>C:\ProgramData\NetTrace</code>.</p>
+  <p>To record even before anyone signs in, or while Cybernetic Bandwidth Monitor is closed, select <strong>Install service</strong> in the
+  same section. This needs administrator approval once, and moves the history to <code>C:\ProgramData\CyberneticBandwidth</code>.</p>
 </div></div>
 
 <h3>Check that it is running</h3>
-<pre><code>Get-Process NetTrace | Select-Object Id, Path, StartTime</code></pre>
+<pre><code>Get-Process CyberneticBandwidth | Select-Object Id, Path, StartTime</code></pre>
 
 <h2>Upgrade to a newer version</h2>
 <p>Copy the new <code>Option1-Portable</code> folder to the device, set <code>$source</code> and <code>$target</code> as in
 step 1, then:</p>
-<pre><code>Stop-Process -Name NetTrace -Force -ErrorAction SilentlyContinue
+<pre><code>Stop-Process -Name CyberneticBandwidth -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 Copy-Item -Path "$source\*" -Destination $target -Exclude *.pdf -Force
 Get-ChildItem $target | Unblock-File
-Start-Process "$target\NetTrace.exe"</code></pre>
+Start-Process "$target\CyberneticBandwidth.exe"</code></pre>
 <p>Your history is kept; the database upgrades itself on first start.</p>
 
 <h2 class="page-break">Uninstall</h2>
 
 <div class="note">
   <strong>Installed the Windows service?</strong>
-  Remove it first: in NetTrace, open <strong>Settings › Running in the background</strong> and select
+  Remove it first: in Cybernetic Bandwidth Monitor, open <strong>Settings › Running in the background</strong> and select
   <strong>Remove service</strong>. That copies the history back to your own folder.
 </div>
 
 <div class="step"><div class="n">1</div><div>
-  <h3>Stop NetTrace</h3>
-  <p>Right-click the tray icon › <strong>Exit NetTrace</strong>, or run:</p>
-<pre><code>Stop-Process -Name NetTrace -Force -ErrorAction SilentlyContinue</code></pre>
+  <h3>Stop Cybernetic Bandwidth Monitor</h3>
+  <p>Right-click the tray icon › <strong>Exit Cybernetic Bandwidth Monitor</strong>, or run:</p>
+<pre><code>Stop-Process -Name CyberneticBandwidth -Force -ErrorAction SilentlyContinue</code></pre>
 </div></div>
 
 <div class="step"><div class="n">2</div><div>
   <h3>Stop it starting at sign-in</h3>
-<pre><code>Unregister-ScheduledTask -TaskName "NetTrace at sign-in ($env:USERNAME)" `
+<pre><code>Unregister-ScheduledTask -TaskName "Cybernetic Bandwidth Monitor at sign-in ($env:USERNAME)" `
     -Confirm:$false -ErrorAction SilentlyContinue
 Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' `
-    -Name 'NetTrace' -ErrorAction SilentlyContinue</code></pre>
+    -Name 'CyberneticBandwidth' -ErrorAction SilentlyContinue</code></pre>
 </div></div>
 
 <div class="step"><div class="n">3</div><div>
   <h3>Delete the program folder</h3>
-<pre><code>Remove-Item "$env:USERPROFILE\Apps\NetTrace" -Recurse -Force</code></pre>
+<pre><code>Remove-Item "$env:USERPROFILE\Apps\CyberneticBandwidth" -Recurse -Force</code></pre>
   <p>Use your own folder if you chose a different <code>$target</code> when installing.</p>
 </div></div>
 
 <div class="step"><div class="n">4</div><div>
   <h3>Optional: delete the collected history</h3>
   <p>Skip this step to keep your history for a later reinstall.</p>
-<pre><code>Remove-Item "$env:LOCALAPPDATA\NetTrace" -Recurse -Force</code></pre>
+<pre><code>Remove-Item "$env:LOCALAPPDATA\CyberneticBandwidth" -Recurse -Force</code></pre>
 </div></div>
 
 <h2>Troubleshooting</h2>
 <table>
   <tr><th style="width:36%">What you see</th><th>What to do</th></tr>
   <tr><td>"Windows protected your PC"</td><td>Run step 3 (Unblock-File) again, or click <strong>More info › Run anyway</strong>.
-    NetTrace is not code-signed, so SmartScreen does not recognise it.</td></tr>
-  <tr><td>Antivirus or company security tool blocks or quarantines <code>NetTrace.exe</code></td><td>NetTrace reads per-application
+    Cybernetic Bandwidth Monitor is not code-signed, so SmartScreen does not recognise it.</td></tr>
+  <tr><td>Antivirus or company security tool blocks or quarantines <code>CyberneticBandwidth.exe</code></td><td>Cybernetic Bandwidth Monitor reads per-application
     network usage and the connection list, which security tools can flag. On a work device, ask IT to allow it.</td></tr>
-  <tr><td>Copy fails: "file is being used by another process"</td><td>NetTrace is still running. Exit it from the tray, then copy again.</td></tr>
-  <tr><td>Anything else</td><td>Logs are in <code>%LocalAppData%\NetTrace\logs</code>. NetTrace's Settings and About pages both open the folder.</td></tr>
+  <tr><td>Copy fails: "file is being used by another process"</td><td>Cybernetic Bandwidth Monitor is still running. Exit it from the tray, then copy again.</td></tr>
+  <tr><td>Anything else</td><td>Logs are in <code>%LocalAppData%\CyberneticBandwidth\logs</code>. Cybernetic Bandwidth Monitor's Settings and About pages both open the folder.</td></tr>
 </table>
 
 <h2 class="page-break">Appendix: installing PowerShell 7</h2>
 <p>This option does not need PowerShell 7. Install it only if you also want Option 2 on this device, or prefer it.</p>
 {{PWSH}}
 
-<footer>NetTrace {{VERSION}} by Lance du Plessis · Option 1: Run portable</footer>
+<footer>Cybernetic Bandwidth Monitor {{VERSION}} by Lance du Plessis · Option 1: Run portable</footer>

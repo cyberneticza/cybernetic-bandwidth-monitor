@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Regenerates src\NetTrace.App\Assets\NetTrace.ico from code.
+    Regenerates src\CyberneticBandwidth.App\Assets\CyberneticBandwidth.ico from code.
 
 .DESCRIPTION
     The icon carries the same colour pairing as the rest of the UI: a cool arrow for bytes coming
@@ -16,7 +16,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $OutputPath = (Join-Path $PSScriptRoot '..\src\NetTrace.App\Assets\NetTrace.ico'),
+    [string] $OutputPath = (Join-Path $PSScriptRoot '..\src\CyberneticBandwidth.App\Assets\CyberneticBandwidth.ico'),
     [string] $PreviewPath
 )
 

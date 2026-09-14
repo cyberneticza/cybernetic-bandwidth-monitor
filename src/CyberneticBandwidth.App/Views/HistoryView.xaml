@@ -1,0 +1,696 @@
+<UserControl x:Class="CyberneticBandwidth.App.Views.HistoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:CyberneticBandwidth.App.Converters"
+             xmlns:ui="clr-namespace:CyberneticBandwidth.App.Controls"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF">
+
+  <UserControl.Resources>
+    <conv:BytesConverter x:Key="Bytes" />
+    <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
+    <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+    <conv:InverseBoolConverter x:Key="NotBool" />
+
+    <Style x:Key="CardValue" TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+      <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+      <Setter Property="FontSize" Value="26" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style x:Key="PanelHeading" TargetType="TextBlock" BasedOn="{StaticResource HeadingText}" />
+
+    <!-- A flat, left-aligned list entry: the quick ranges in the range picker. -->
+    <Style x:Key="PresetButton" TargetType="Button">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+      <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+      <Setter Property="FontSize" Value="{StaticResource SizeBody}" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Chrome" Background="Transparent" CornerRadius="4" Padding="10,6">
+              <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- A day in the range picker's month. Later triggers win: the range edges over the range. -->
+    <Style x:Key="PickerDayButton" TargetType="Button">
+      <Setter Property="Width" Value="36" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Margin" Value="1" />
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+      <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+      <Setter Property="FontSize" Value="{StaticResource SizeBody}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Grid>
+              <Border x:Name="Chrome" CornerRadius="4" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" />
+              <TextBlock x:Name="Label" Text="{Binding Label}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Foreground="{TemplateBinding Foreground}" Typography.NumeralAlignment="Tabular" />
+              <Ellipse x:Name="Dot" Width="4" Height="4" Fill="{DynamicResource MutedBrush}" Visibility="Collapsed"
+                       HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,3" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+              </Trigger>
+              <DataTrigger Binding="{Binding HasData}" Value="True">
+                <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding IsInMonth}" Value="False">
+                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource MutedBrush}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding IsToday}" Value="True">
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource DownloadBrush}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding IsInRange}" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SelectionBrush}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding IsEdge}" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource DownloadBrush}" />
+                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource SurfaceBrush}" />
+                <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
+                <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource SurfaceBrush}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                <Setter Property="Opacity" Value="0.35" />
+                <Setter Property="IsHitTestVisible" Value="False" />
+              </DataTrigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Rows the report calls out (the busiest day, unusually heavy days), and days before records began. -->
+    <Style x:Key="DayRowStyle" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+          <Setter Property="Background" Value="{DynamicResource WarningSurfaceBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding IsRecorded}" Value="False">
+          <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="BytesCell" TargetType="TextBlock" BasedOn="{StaticResource NumericText}" />
+  </UserControl.Resources>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" FocusVisualStyle="{x:Null}">
+    <StackPanel Margin="{StaticResource PagePadding}" ui:Layout.CompactBelow="720">
+
+      <!-- ======================================================== toolbar -->
+      <Grid Margin="0,0,0,16">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <WrapPanel VerticalAlignment="Bottom">
+          <StackPanel Margin="0,0,16,8">
+            <TextBlock Text="Range" Style="{StaticResource MutedText}" Margin="0,0,0,4" />
+            <Grid>
+              <!-- Not clickable while the picker is open: the click that closes it must not reopen it. -->
+              <Button x:Name="RangeButton" Command="{Binding OpenPickerCommand}" MinWidth="280" Padding="12,7"
+                      HorizontalContentAlignment="Left"
+                      IsHitTestVisible="{Binding IsOpen, ElementName=RangePopup, Converter={StaticResource NotBool}}">
+                <Grid MinWidth="250">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="&#xE787;" Style="{StaticResource IconText}" Margin="0,0,10,0" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{Binding RangeLabel}" Style="{StaticResource BodyText}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="&#xE70D;" Style="{StaticResource IconText}" FontSize="10" Margin="12,0,0,0"
+                             VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" />
+                </Grid>
+              </Button>
+
+              <Popup x:Name="RangePopup" PlacementTarget="{Binding ElementName=RangeButton}" Placement="Bottom"
+                     VerticalOffset="4" StaysOpen="False" AllowsTransparency="True"
+                     IsOpen="{Binding IsPickerOpen, Mode=TwoWay}">
+                <Border Style="{StaticResource Panel}" Background="{DynamicResource RaisedBrush}" Padding="12" Margin="0,0,14,14">
+                  <Border.Effect>
+                    <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.25" />
+                  </Border.Effect>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="170" />
+                      <ColumnDefinition Width="12" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                      <TextBlock Text="Quick ranges" Style="{StaticResource MutedText}" Margin="10,0,0,6" />
+                      <ItemsControl ItemsSource="{Binding Presets}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button Style="{StaticResource PresetButton}" Content="{Binding Label}"
+                                    Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="1" Width="1" Fill="{DynamicResource LineBrush}" HorizontalAlignment="Center" />
+
+                    <StackPanel Grid.Column="2">
+                      <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Style="{StaticResource IconButton}" Content="&#xE76B;" ToolTip="Previous month"
+                                Command="{Binding PreviousMonthCommand}" />
+                        <TextBlock Grid.Column="1" Text="{Binding PickerMonthLabel}" Style="{StaticResource BodyText}"
+                                   FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE76C;" ToolTip="Next month"
+                                Command="{Binding NextMonthCommand}" />
+                      </Grid>
+
+                      <ItemsControl ItemsSource="{Binding WeekdayHeaders}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <UniformGrid Columns="7" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding}" Style="{StaticResource MutedText}" HorizontalAlignment="Center" Margin="0,0,0,2" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+
+                      <ItemsControl ItemsSource="{Binding PickerDays}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <UniformGrid Columns="7" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button Style="{StaticResource PickerDayButton}"
+                                    Command="{Binding DataContext.PickDayCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+
+                      <TextBlock Text="{Binding PickerHint}" Style="{StaticResource MutedText}" TextWrapping="Wrap"
+                                 MaxWidth="266" Margin="2,8,0,0" />
+                      <TextBlock Style="{StaticResource MutedText}" Margin="2,2,0,0" FontSize="{StaticResource SizeSmall}">
+                        <Run Text="●" /> <Run Text="usage recorded" />
+                      </TextBlock>
+                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                        <Button Content="Cancel" Command="{Binding ClosePickerCommand}" Margin="0,0,8,0" />
+                        <Button Content="Apply" Command="{Binding ApplyCustomRangeCommand}" Style="{StaticResource PrimaryButton}" Padding="16,7" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </Popup>
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Margin="0,0,16,8">
+            <TextBlock Text="Direction" Style="{StaticResource MutedText}" Margin="0,0,0,4" />
+            <ComboBox ItemsSource="{Binding Directions}" Width="150"
+                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                      SelectedValue="{Binding Direction}" />
+          </StackPanel>
+
+          <StackPanel Margin="0,0,16,8">
+            <TextBlock Text="Group charts by" Style="{StaticResource MutedText}" Margin="0,0,0,4" />
+            <ComboBox ItemsSource="{Binding Groupings}" Width="110" DisplayMemberPath="Label"
+                      SelectedItem="{Binding SelectedGrouping}" />
+          </StackPanel>
+
+          <CheckBox IsChecked="{Binding CompareWithPrevious}" VerticalAlignment="Bottom" Margin="0,0,16,15">
+            <TextBlock>
+              <Run Text="Compare with" />
+              <Run Text="{Binding PreviousRangeLabel, Mode=OneWay}" />
+            </TextBlock>
+          </CheckBox>
+
+          <Button Content="Refresh" Command="{Binding ReloadCommand}" VerticalAlignment="Bottom" Margin="0,0,0,8"
+                  IsEnabled="{Binding IsBusy, Converter={StaticResource NotBool}}" />
+        </WrapPanel>
+
+        <TextBlock Grid.Column="1" Text="Loading…" Style="{StaticResource MutedText}" VerticalAlignment="Bottom" Margin="0,0,0,16"
+                   Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+      </Grid>
+
+      <Border Style="{StaticResource Panel}" Padding="18,14" Margin="0,0,0,16"
+              Visibility="{Binding Message, Converter={StaticResource NullToVisibility}}">
+        <TextBlock Text="{Binding Message}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+      </Border>
+
+      <StackPanel Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}">
+
+        <!-- ======================================================== summary cards -->
+        <ItemsControl ItemsSource="{Binding Cards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <ui:AdaptiveGrid MinItemWidth="175" Spacing="16" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Style="{StaticResource Panel}" Padding="18,14">
+                <StackPanel>
+                  <TextBlock Text="{Binding Title}" Style="{StaticResource MutedText}" />
+                  <TextBlock Text="{Binding Value}" Style="{StaticResource CardValue}" ToolTip="{Binding Value}" Margin="0,2,0,2" />
+                  <TextBlock Text="{Binding Detail}" Style="{StaticResource MutedText}" TextWrapping="Wrap"
+                             FontSize="{StaticResource SizeSmall}" />
+                  <TextBlock Text="{Binding Change}" Style="{StaticResource BodyText}" FontSize="{StaticResource SizeSmall}"
+                             Margin="0,4,0,0" Visibility="{Binding Change, Converter={StaticResource NullToVisibility}}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- ======================================================== highlights -->
+        <Border Style="{StaticResource Panel}" Padding="18,14" Margin="0,16,0,0">
+          <StackPanel>
+            <TextBlock Text="What stands out" Style="{StaticResource PanelHeading}" />
+            <TextBlock Text="{Binding CoverageNote}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                       Visibility="{Binding CoverageNote, Converter={StaticResource NullToVisibility}}" />
+            <ItemsControl ItemsSource="{Binding Highlights}" Margin="0,8,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="28" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Glyph}" VerticalAlignment="Top" Margin="0,2,0,0">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource IconText}">
+                          <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                              <Setter Property="Foreground" Value="{DynamicResource UploadBrush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsGood}" Value="True">
+                              <Setter Property="Foreground" Value="{DynamicResource DownloadBrush}" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Grid.Column="1" Text="{Binding Text}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <!-- ======================================================== usage over the range -->
+        <Border Style="{StaticResource Panel}" Height="340" Margin="0,16,0,0">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Margin="16,12,16,0">
+              <TextBlock Text="{Binding DailyTitle}" Style="{StaticResource PanelHeading}" />
+              <WrapPanel Margin="0,2,0,0">
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,14,0">
+                  <Run Text="■" Foreground="{DynamicResource DownloadBrush}" /> <Run Text="downloaded" />
+                  <Run Text="  ■" Foreground="{DynamicResource UploadBrush}" /> <Run Text="uploaded" />
+                </TextBlock>
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,14,0"
+                           Visibility="{Binding ShowTrendLegend, Converter={StaticResource BoolToVisibility}}">
+                  <Run Text="━" Foreground="{DynamicResource TextBrush}" /> <Run Text="7-day average" />
+                </TextBlock>
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,14,0"
+                           Visibility="{Binding ShowPreviousLegend, Converter={StaticResource BoolToVisibility}}">
+                  <Run Text="╌╌" /> <Run Text="previous period" />
+                </TextBlock>
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,14,0"
+                           Visibility="{Binding ShowUnusualLegend, Converter={StaticResource BoolToVisibility}}">
+                  <Run Text="▮" Foreground="{DynamicResource AlertBrush}" /> <Run Text="unusually heavy" />
+                </TextBlock>
+                <TextBlock Style="{StaticResource MutedText}" Text="· click a day's bar to open it in Trends"
+                           Visibility="{Binding BarsAreDays, Converter={StaticResource BoolToVisibility}}" />
+              </WrapPanel>
+            </StackPanel>
+            <lvc:CartesianChart Margin="8,4,8,8"
+                                Series="{Binding DailySeries}"
+                                XAxes="{Binding DailyXAxes}"
+                                YAxes="{Binding DailyYAxes}"
+                                Sections="{Binding DailySections}"
+                                LegendPosition="Hidden"
+                                TooltipPosition="Top"
+                                TooltipTextPaint="{Binding TooltipTextPaint}"
+                                TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}" />
+          </DockPanel>
+        </Border>
+
+        <!-- ======================================================== busy days and weekdays -->
+        <ui:AdaptiveColumns Margin="0,16,0,0">
+
+          <Border Style="{StaticResource Panel}" Padding="16,12" ui:AdaptiveColumns.Weight="3">
+            <StackPanel>
+              <TextBlock Text="Busy days" Style="{StaticResource PanelHeading}" />
+              <TextBlock Text="{Binding CalendarSummary}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,10" />
+
+              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" FocusVisualStyle="{x:Null}" ui:Layout.PassWheelAtEnd="True"
+                            ScrollChanged="OnCalendarScrollChanged">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                  <!-- Weekday names beside the rows, under the month label row. -->
+                  <StackPanel Margin="0,18,8,0">
+                    <TextBlock Text="{Binding WeekdayHeaders[0]}" Style="{StaticResource MutedText}" FontSize="10" Height="18" />
+                    <TextBlock Text="" Height="18" />
+                    <TextBlock Text="{Binding WeekdayHeaders[2]}" Style="{StaticResource MutedText}" FontSize="10" Height="18" />
+                    <TextBlock Text="" Height="18" />
+                    <TextBlock Text="{Binding WeekdayHeaders[4]}" Style="{StaticResource MutedText}" FontSize="10" Height="18" />
+                    <TextBlock Text="" Height="18" />
+                    <TextBlock Text="{Binding WeekdayHeaders[6]}" Style="{StaticResource MutedText}" FontSize="10" Height="18" />
+                  </StackPanel>
+
+                  <ItemsControl ItemsSource="{Binding CalendarWeeks}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Width="18">
+                          <Canvas Height="18" ClipToBounds="False">
+                            <TextBlock Text="{Binding MonthLabel}" Style="{StaticResource MutedText}" FontSize="10" />
+                          </Canvas>
+                          <ItemsControl ItemsSource="{Binding Cells}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate>
+                                <Grid Width="15" Height="15" Margin="0,0,3,3" ToolTip="{Binding Tooltip}" Background="Transparent">
+                                  <Grid.Style>
+                                    <Style TargetType="Grid">
+                                      <Setter Property="Cursor" Value="Hand" />
+                                      <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBlank}" Value="True">
+                                          <Setter Property="Visibility" Value="Hidden" />
+                                        </DataTrigger>
+                                      </Style.Triggers>
+                                    </Style>
+                                  </Grid.Style>
+                                  <Grid.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick"
+                                                  Command="{Binding DataContext.OpenDayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  CommandParameter="{Binding Day}" />
+                                  </Grid.InputBindings>
+                                  <Border CornerRadius="3" Background="{DynamicResource RaisedBrush}"
+                                          BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" />
+                                  <Border CornerRadius="3" Background="{DynamicResource DownloadBrush}" Opacity="{Binding Opacity}" />
+                                </Grid>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </ScrollViewer>
+
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock Text="Quieter" Style="{StaticResource MutedText}" FontSize="{StaticResource SizeSmall}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                <Border Width="13" Height="13" CornerRadius="3" Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" Margin="0,0,3,0" />
+                <Border Width="13" Height="13" CornerRadius="3" Background="{DynamicResource DownloadBrush}" Opacity="0.28" Margin="0,0,3,0" />
+                <Border Width="13" Height="13" CornerRadius="3" Background="{DynamicResource DownloadBrush}" Opacity="0.5" Margin="0,0,3,0" />
+                <Border Width="13" Height="13" CornerRadius="3" Background="{DynamicResource DownloadBrush}" Opacity="0.75" Margin="0,0,3,0" />
+                <Border Width="13" Height="13" CornerRadius="3" Background="{DynamicResource DownloadBrush}" Margin="0,0,6,0" />
+                <TextBlock Text="Busier · click a day to open it in Trends" Style="{StaticResource MutedText}" FontSize="{StaticResource SizeSmall}" VerticalAlignment="Center" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Style="{StaticResource Panel}" ui:AdaptiveColumns.Weight="2" ui:AdaptiveColumns.StackedHeight="300">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Top" Margin="16,12,16,0">
+                <TextBlock Text="Busiest weekdays" Style="{StaticResource PanelHeading}" />
+                <TextBlock Text="{Binding WeekdaySummary}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0" />
+              </StackPanel>
+              <lvc:CartesianChart Margin="8,4,8,8" MinHeight="200"
+                                  Series="{Binding WeekdaySeries}"
+                                  XAxes="{Binding WeekdayXAxes}"
+                                  YAxes="{Binding WeekdayYAxes}"
+                                  LegendPosition="Hidden"
+                                  TooltipPosition="Top"
+                                  TooltipTextPaint="{Binding TooltipTextPaint}"
+                                  TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}" />
+            </DockPanel>
+          </Border>
+        </ui:AdaptiveColumns>
+
+        <!-- ======================================================== busy hours -->
+        <Border Style="{StaticResource Panel}" Padding="16,12" Margin="0,16,0,0">
+          <StackPanel>
+            <TextBlock Text="Busy hours" Style="{StaticResource PanelHeading}" />
+            <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0">
+              <Run Text="{Binding HourSummary, Mode=OneWay}" />
+              <Run Text="Darker squares carry more traffic on an average day." />
+            </TextBlock>
+            <TextBlock Text="{Binding HourNote}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                       Visibility="{Binding HourNote, Converter={StaticResource NullToVisibility}}" />
+
+            <Grid Margin="0,10,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="44" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+
+              <ItemsControl Grid.Column="1" ItemsSource="{Binding HourLabels}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding}" Style="{StaticResource MutedText}" FontSize="10" Margin="2,0,0,3" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding HourRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="44" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Text="{Binding Label}" Style="{StaticResource MutedText}" VerticalAlignment="Center" />
+                      <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid Height="22" Margin="1.5" ToolTip="{Binding Tooltip}" Background="Transparent">
+                              <Border CornerRadius="3" Background="{DynamicResource RaisedBrush}" />
+                              <Border CornerRadius="3" Background="{DynamicResource DownloadBrush}" Opacity="{Binding Opacity}" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- ======================================================== applications -->
+        <Border Style="{StaticResource Panel}" Height="320" Margin="0,16,0,0">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Margin="16,12,16,0">
+              <TextBlock Text="Top applications over time" Style="{StaticResource PanelHeading}" />
+              <TextBlock Text="The six busiest applications and everything else, stacked. Colours match the table below."
+                         Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0" />
+            </StackPanel>
+            <lvc:CartesianChart Margin="8,4,8,8"
+                                Series="{Binding AppSeries}"
+                                XAxes="{Binding AppXAxes}"
+                                YAxes="{Binding AppYAxes}"
+                                LegendPosition="Hidden"
+                                TooltipPosition="Top"
+                                TooltipTextPaint="{Binding TooltipTextPaint}"
+                                TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}" />
+          </DockPanel>
+        </Border>
+
+        <Border Style="{StaticResource Panel}" Height="400" Margin="0,16,0,0">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" Margin="16,12,12,6">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="Applications" Style="{StaticResource PanelHeading}" />
+                <TextBlock Text="{Binding AppsSummary}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0" />
+              </StackPanel>
+              <Button Grid.Column="1" Command="{Binding ExportAppsCommand}" VerticalAlignment="Top" ToolTip="Save this table as a CSV file">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="&#xEDE1;" Style="{StaticResource IconText}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                  <TextBlock Text="Export CSV" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </Grid>
+
+            <DataGrid ItemsSource="{Binding AppRows}" Margin="8,0,8,8">
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Application" Width="*" SortMemberPath="Name">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal">
+                        <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2" Fill="{Binding Swatch}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Down" Binding="{Binding Downloaded, Converter={StaticResource Bytes}}"
+                                    SortMemberPath="Downloaded" Width="90" ElementStyle="{StaticResource BytesCell}" />
+                <DataGridTextColumn Header="Up" Binding="{Binding Uploaded, Converter={StaticResource Bytes}}"
+                                    SortMemberPath="Uploaded" Width="90" ElementStyle="{StaticResource BytesCell}" />
+                <DataGridTemplateColumn Header="Share" Width="150" SortMemberPath="Share">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="48" />
+                        </Grid.ColumnDefinitions>
+                        <ProgressBar Value="{Binding Share, Mode=OneWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding ShareText}" Style="{StaticResource NumericText}" />
+                      </Grid>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Days used" Binding="{Binding DaysActive}" Width="80" ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="Busiest day" Binding="{Binding BusiestDay}" Width="170" />
+                <DataGridTemplateColumn Header="Change" Width="90" SortMemberPath="ChangeSort">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Change}" HorizontalAlignment="Right" ToolTip="Against the previous period">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+                            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding IsUp}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource UploadBrush}" />
+                              </DataTrigger>
+                              <DataTrigger Binding="{Binding IsDown}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource DownloadBrush}" />
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </DockPanel>
+        </Border>
+
+        <!-- ======================================================== day log -->
+        <Border Style="{StaticResource Panel}" Height="480" Margin="0,16,0,0">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" Margin="16,12,12,6">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="Day by day" Style="{StaticResource PanelHeading}" />
+                <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                           Text="Newest first. The busiest and unusually heavy days are shaded; double-click a day to open it in Trends." />
+              </StackPanel>
+              <Button Grid.Column="1" Command="{Binding ExportDaysCommand}" VerticalAlignment="Top" ToolTip="Save this log as a CSV file">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="&#xEDE1;" Style="{StaticResource IconText}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                  <TextBlock Text="Export CSV" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </Grid>
+
+            <DataGrid x:Name="DayGrid" ItemsSource="{Binding DayRows}" Margin="8,0,8,8" RowStyle="{StaticResource DayRowStyle}">
+              <DataGrid.InputBindings>
+                <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding OpenDayCommand}"
+                              CommandParameter="{Binding SelectedItem.Day, ElementName=DayGrid}" />
+              </DataGrid.InputBindings>
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Day" Binding="{Binding DayLabel}" SortMemberPath="Day" Width="130" />
+                <DataGridTextColumn Header="Down" Binding="{Binding Downloaded, Converter={StaticResource Bytes}}"
+                                    SortMemberPath="Downloaded" Width="90" ElementStyle="{StaticResource BytesCell}" />
+                <DataGridTextColumn Header="Up" Binding="{Binding Uploaded, Converter={StaticResource Bytes}}"
+                                    SortMemberPath="Uploaded" Width="90" ElementStyle="{StaticResource BytesCell}" />
+                <DataGridTextColumn Header="vs average" Binding="{Binding VsAverage}" SortMemberPath="VsAverageSort"
+                                    Width="84" ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="Most used" Binding="{Binding TopApp}" Width="*" />
+                <DataGridTextColumn Header="Busiest hour" Binding="{Binding BusiestHour}" Width="90" ElementStyle="{StaticResource NumericText}" />
+                <DataGridTemplateColumn Header="Network" Width="90" SortMemberPath="Network">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Network}">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+                            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding HasProblems}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AlertBrush}" />
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="170" />
+                <DataGridTemplateColumn Width="40" CanUserSort="False">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Button Style="{StaticResource IconButton}" Content="&#xE8A7;" ToolTip="Open this day in Trends"
+                              Command="{Binding DataContext.OpenDayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding Day}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </DockPanel>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

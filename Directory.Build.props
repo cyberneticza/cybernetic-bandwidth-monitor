@@ -17,7 +17,7 @@
        the exe's file properties, the About page, and the Settings > Apps entry. -->
   <PropertyGroup>
     <VersionPrefix>1.1.0</VersionPrefix>
-    <Product>NetTrace</Product>
+    <Product>Cybernetic Bandwidth Monitor</Product>
     <Authors>Lance du Plessis</Authors>
     <Company>Lance du Plessis</Company>
     <Copyright>Copyright © 2026 Lance du Plessis</Copyright>

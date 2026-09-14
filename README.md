@@ -1,4 +1,4 @@
-# NetTrace
+# Cybernetic Bandwidth Monitor
 
 A per-user network usage tracker for Windows 10/11. Shows which applications are using your
 bandwidth, keeps the history locally, and charts it over periods from a day to a year. It also
@@ -41,38 +41,45 @@ pwsh -File build\publish-portable.ps1
 pwsh -File build\install-peruser.ps1 -Autostart
 ```
 
-Installs to `%LocalAppData%\Programs\NetTrace` with a Start Menu shortcut and a per-user uninstall
+Installs to `%LocalAppData%\Programs\CyberneticBandwidth` with a Start Menu shortcut and a per-user uninstall
 entry. `build\uninstall-peruser.ps1` reverses all of it; add `-KeepData` to leave your history.
 
-**Upgrading** is the same two scripts. Exit NetTrace from its tray icon first: a running copy locks
+**Upgrading** is the same two scripts. Exit Cybernetic Bandwidth Monitor from its tray icon first: a running copy locks
 the exe and the install fails to overwrite it. The database upgrades itself on first start and keeps
 its history.
 
-Collected data lives in `%LocalAppData%\NetTrace`: `nettrace.db`, `preferences.json` and seven days
-of rolling logs. While the optional service is installed, the database is in `%ProgramData%\NetTrace`
+**Coming from NetTrace**, this app's earlier name: install as above. The script removes the NetTrace
+install (and refuses while NetTrace's Windows service is installed; remove that from NetTrace's Settings
+first). On its first start the app moves `%LocalAppData%\NetTrace` to its own folder, renaming the
+database and logs, and replaces NetTrace's sign-in entry with its own (`LegacyNetTrace`,
+`SignInStartup`). A folder it cannot move, because NetTrace is still running or the new folder
+already has data, is left alone and the reason is logged.
+
+Collected data lives in `%LocalAppData%\CyberneticBandwidth`: `cyberneticbandwidth.db`, `preferences.json` and seven days
+of rolling logs. While the optional service is installed, the database is in `%ProgramData%\CyberneticBandwidth`
 instead.
 
 **Other devices.** `pwsh -File build\make-transfer.ps1` publishes, then builds `artifacts\transfer`
-with one folder per way of putting NetTrace on another device, each holding every file it needs and
+with one folder per way of putting Cybernetic Bandwidth Monitor on another device, each holding every file it needs and
 an install guide PDF (install, upgrade, uninstall, the exact commands, and installing PowerShell 7):
 
 | Folder | For |
 |---|---|
-| `Option1-Portable` | Copy `NetTrace.exe` anywhere and run it. No scripts; works from Windows PowerShell 5.1. |
+| `Option1-Portable` | Copy `CyberneticBandwidth.exe` anywhere and run it. No scripts; works from Windows PowerShell 5.1. |
 | `Option2-Install` | The per-user install above: `app\` plus the install and uninstall scripts. Needs `pwsh`. |
 
 The guides are HTML templates in `build\transfer` (shared styles in `guide.css`, the PowerShell 7
 section in `pwsh-section.html`), printed to PDF by headless Microsoft Edge. Pass `-SkipPublish` to
 reuse the current `artifacts\portable` build.
 
-`build\make-icon.ps1` regenerates `src\NetTrace.App\Assets\NetTrace.ico` from code; pass
+`build\make-icon.ps1` regenerates `src\CyberneticBandwidth.App\Assets\CyberneticBandwidth.ico` from code; pass
 `-PreviewPath` to also write each size as a PNG.
 
 ## How it measures, and what that costs you
 
 Monitoring without administrator rights rules out almost everything a network monitor normally
 does. Packet capture needs a driver. A WFP callout needs the kernel. ETW's kernel network provider
-needs `SeSystemProfilePrivilege`. So NetTrace fuses sources that a standard user *can* read:
+needs `SeSystemProfilePrivilege`. So Cybernetic Bandwidth Monitor fuses sources that a standard user *can* read:
 
 | Source | Gives | Refresh |
 |---|---|---|
@@ -84,7 +91,7 @@ needs `SeSystemProfilePrivilege`. So NetTrace fuses sources that a standard user
 | speed.cloudflare.com endpoints | Download, upload, latency and jitter to the nearest data centre | When the user runs a test |
 | Vultr public speed-test hosts in ten cities | Latency and download to each part of the world | When the user runs a regional test |
 
-The last three are the only network traffic NetTrace creates; see
+The last three are the only network traffic Cybernetic Bandwidth Monitor creates; see
 [The connection itself](#the-connection-itself).
 
 Two consequences worth internalising before you extend this:
@@ -96,7 +103,7 @@ connection table is keyed by PID. They do not line up reliably, so the live view
 two separate tables rather than joining them into one convincing-looking lie.
 
 **NDU names nothing for an unpackaged caller.** `AttributionName` is only filled in for apps running
-inside a package, so NetTrace always gets it empty. `AttributionId` still identifies the app — an NT
+inside a package, so Cybernetic Bandwidth Monitor always gets it empty. `AttributionId` still identifies the app — an NT
 device path for desktop programs, a package family name for Store apps, `System\...` for the
 kernel — and `AppNameResolver` turns that into the name from the exe's version resource or the
 package manifest. Stored names are re-derived on every start. Traffic that arrives with an empty id
@@ -105,7 +112,7 @@ own most of the bytes, because it is the process that puts them on the wire.
 
 ## Running in the background
 
-NetTrace lives in the notification area. Closing the window hides it and collection carries on;
+Cybernetic Bandwidth Monitor lives in the notification area. Closing the window hides it and collection carries on;
 **Exit** on the tray menu stops it. Launched with `--minimised` (which is what start at sign-in
 does), it starts in the tray without opening the window. Starting it again while it runs brings
 the existing window forward. Windows 11 puts new tray icons in the overflow flyout; drag it onto
@@ -116,8 +123,8 @@ background**.
 
 ### Start at sign-in
 
-A Task Scheduler task for the signed-in user, `NetTrace at sign-in (<user>)` (`SignInStartup`): a
-logon trigger with a 5-second delay, running `NetTrace.exe --minimised` with the user's own token, no
+A Task Scheduler task for the signed-in user, `Cybernetic Bandwidth Monitor at sign-in (<user>)` (`SignInStartup`): a
+logon trigger with a 5-second delay, running `CyberneticBandwidth.exe --minimised` with the user's own token, no
 time limit and no battery conditions. A task rather than the `Run` registry key, because Windows holds
 `Run`-key apps back after sign-in and Task Manager's startup list can switch them off. Creating a task
 for your own account needs no administrator rights. If Task Scheduler refuses, the `Run` key is the
@@ -134,24 +141,24 @@ One program runs three ways (`Program.Main`, `CollectorMode`):
 
 | Started as | Mode | Does |
 |---|---|---|
-| `NetTrace.exe --service` | `Service` | The collector with no window: sources, sampler, watcher, health monitor, plus `CollectorPipeServer` |
-| `NetTrace.exe` while the service is installed | `Viewer` | The window without a collector: live figures come over the collector link, history from the shared database |
-| `NetTrace.exe` otherwise | `InProcess` | The usual app, collecting in the window's own process |
+| `CyberneticBandwidth.exe --service` | `Service` | The collector with no window: sources, sampler, watcher, health monitor, plus `CollectorPipeServer` |
+| `CyberneticBandwidth.exe` while the service is installed | `Viewer` | The window without a collector: live figures come over the collector link, history from the shared database |
+| `CyberneticBandwidth.exe` otherwise | `InProcess` | The usual app, collecting in the window's own process |
 
-**Installing.** Settings starts `NetTrace.exe --install-service --result <file>` behind a UAC prompt.
+**Installing.** Settings starts `CyberneticBandwidth.exe --install-service --result <file>` behind a UAC prompt.
 That elevated copy (`CollectorServiceSetup`):
-1. copies the program to `%ProgramFiles%\NetTrace`;
-2. prepares `%ProgramData%\NetTrace`;
-3. registers the service `NetTrace` ("NetTrace collector") as LocalSystem with `start= delayed-auto`,
+1. copies the program to `%ProgramFiles%\CyberneticBandwidth`;
+2. prepares `%ProgramData%\CyberneticBandwidth`;
+3. registers the service `CyberneticBandwidth` ("Cybernetic Bandwidth Monitor collector") as LocalSystem with `start= delayed-auto`,
    restart on failure, and a descriptor that lets interactive users start and stop it.
 
 The window then copies its history into the shared folder (SQLite `VACUUM INTO`, a consistent
 snapshot of a database in use), starts the service and restarts itself as a viewer. **Update** re-runs
 the install over the top when the window's version differs from the service's. **Remove** stops and
 deletes the service, deletes the Program Files copy, copies the shared history back to
-`%LocalAppData%\NetTrace` and restarts the window, which then collects itself again.
+`%LocalAppData%\CyberneticBandwidth` and restarts the window, which then collects itself again.
 
-**The collector link.** A named pipe, `NetTrace.Collector.v1`, carrying one JSON message per line
+**The collector link.** A named pipe, `CyberneticBandwidth.Collector.v1`, carrying one JSON message per line
 (`CollectorLink`). On connect the service sends `hello` (version, data folder, the health-check
 switch), then the latest status, network and health. After that it relays every `LiveActivityBroker`
 event: usage, connections, connection events, throughput, status, network, health and network events.
@@ -164,28 +171,28 @@ shows a banner while the service is not answering.
 **Folders and security.**
 - **The program** runs from Program Files. A service must never run from a folder its user can write
   to, or anything running as that user could swap the exe and run as SYSTEM.
-- **`%ProgramData%\NetTrace`** holds the database and `service.json`. Users may change the files in it
+- **`%ProgramData%\CyberneticBandwidth`** holds the database and `service.json`. Users may change the files in it
   but not the folder itself, which the install takes ownership of and refuses when it is a link. A
   user who could rename the folder and put a junction in its place could send the service's writes to
   any file on the disk.
 - **`logs`** in that folder is the service's alone, read-only to users. A viewer window logs to
-  `%LocalAppData%\NetTrace\logs\nettrace-window-*.log`, and keeps `preferences.json` there too.
+  `%LocalAppData%\CyberneticBandwidth\logs\cyberneticbandwidth-window-*.log`, and keeps `preferences.json` there too.
 - **The pipe** refuses network logons and is open to authenticated local users. It carries the same
   figures any user of the PC can read in the shared database.
 
 **What is not known yet.** The service has only been exercised from a console (below) under a
 standard account. Whether NDU still attributes bytes per application when called from session 0 as
 LocalSystem has not been checked; the service logs which source it picked
-(`%ProgramData%\NetTrace\logs\nettrace-service-*.log`). Try it on a machine where you are an
+(`%ProgramData%\CyberneticBandwidth\logs\cyberneticbandwidth-service-*.log`). Try it on a machine where you are an
 administrator before relying on it.
 
 **Testing without installing.** Run the collector and a viewer side by side against a scratch folder;
-neither needs administrator rights. Exit the usual NetTrace first (a viewer is still single-instance):
+neither needs administrator rights. Exit the usual Cybernetic Bandwidth Monitor first (a viewer is still single-instance):
 
 ```powershell
-$env:Storage__DataDirectory = "$env:TEMP\nettrace-service-test"
-Start-Process .\NetTrace.exe --service     # the collector, no window
-Start-Process .\NetTrace.exe --viewer      # a window that shows it
+$env:Storage__DataDirectory = "$env:TEMP\cyberneticbandwidth-service-test"
+Start-Process .\CyberneticBandwidth.exe --service     # the collector, no window
+Start-Process .\CyberneticBandwidth.exe --viewer      # a window that shows it
 ```
 
 Stop the `--service` process to see the banner, and start it again to see the window reconnect.
@@ -198,7 +205,7 @@ Stop the `--service` process to see the banner, and start it again to see the wi
   pan, double-click to reset, click a day to open it. The selected day is charted underneath,
   stacked by application, with a table of that day's applications; tick some to chart only
   those. Detail is **Auto** by default: 5-minute bins where minute data covers the whole day
-  (the last week, while NetTrace was running), hourly otherwise. 1, 5 and 15 minutes and hourly
+  (the last week, while Cybernetic Bandwidth Monitor was running), hourly otherwise. 1, 5 and 15 minutes and hourly
   can be chosen directly, and the chart says when the finer data only covers part of the day.
   Hovering the day chart lists every application in that time slot, and any network events in it.
 - **History** — a report for any range of days: quick ranges (last 7, 30 or 90 days, this or last
@@ -230,7 +237,7 @@ dashboards and usage meters commonly report: period totals and change against th
 ("top talkers" in NetFlow tools), day-of-week and hour-of-day patterns, a calendar heatmap, and
 usage against the monthly budget with a projection to the end of the cycle (as ISP usage meters do).
 Averages and patterns cover the *recorded* span only, from the first day with traffic in the
-range, so installing NetTrace halfway through a month does not halve its average. A day is
+range, so installing Cybernetic Bandwidth Monitor halfway through a month does not halve its average. A day is
 "unusually heavy" when, with at least seven recorded days, it is more than two standard deviations
 above the average and at least 1.5 times it. A previous period with nothing recorded is not compared
 with, since every application would otherwise read as new. The calendar shades days in quarters of
@@ -279,7 +286,7 @@ screen with the one before it; Around the world compares each region with its ow
 The continent verdicts use each continent's quickest-answering server.
 
 **VPNs and security proxies.** Netskope, Zscaler and similar agents steer traffic without an adapter
-of their own, so NetTrace detects them by their running service; VPNs are detected by an adapter
+of their own, so Cybernetic Bandwidth Monitor detects them by their running service; VPNs are detected by an adapter
 that is actually up, which avoids reporting a VPN whose driver is merely installed. When one is in
 the path, quality, speed and even the per-app byte counts describe the tunnel, and the UI says so.
 
@@ -289,14 +296,14 @@ and at 80% and 100% of an optional daily or billing-month budget (once per level
 across restarts).
 
 **Privacy.** Apart from the quality checks (which can be turned off) and speed tests the user starts
-(to Cloudflare, and to Vultr for the regional test), NetTrace makes no network requests, and nothing
+(to Cloudflare, and to Vultr for the regional test), Cybernetic Bandwidth Monitor makes no network requests, and nothing
 it records leaves the PC.
 
 ## Light and dark
 
 **System** (the default) follows the Windows app theme and switches when Windows does; **Light**
 and **Dark** pin one. Change it under Settings > Appearance. The choice is saved to
-`%LocalAppData%\NetTrace\preferences.json`.
+`%LocalAppData%\CyberneticBandwidth\preferences.json`.
 
 Colours live only in `Themes/Dark.xaml` and `Themes/Light.xaml`, which define the same keys; add a
 key to both. Views must use `DynamicResource` for anything colour-related or it will not follow a
@@ -350,7 +357,7 @@ Two files, for two audiences.
 | `Retention` | How long minute, hour and day buckets, connection events, health samples and network events are kept |
 | `Health` | Quality-check interval, the HTTPS probe URL, probes per check, the Slow thresholds, and how many checks must agree before an event |
 
-**`%LocalAppData%\NetTrace\preferences.json`** holds what the user chose in the app: theme, whether
+**`%LocalAppData%\CyberneticBandwidth\preferences.json`** holds what the user chose in the app: theme, whether
 quality checks run, heavy-use alert threshold, budgets and their reset day, which budget warnings
 were already shown, and whether the Connections explanation is visible. Settings writes it; an
 unreadable file is ignored rather than stopping the app.
@@ -371,9 +378,9 @@ To release:
 ## Layout
 
 ```
-src/NetTrace.Core    Sources, interop, sampler, health monitor, speed test, domain models. No UI, no database.
-src/NetTrace.Data    SQLite schema, repositories, rollup and retention.
-src/NetTrace.App     WPF shell, pages and view models, theme, tray icon, alerts, preferences.
+src/CyberneticBandwidth.Core    Sources, interop, sampler, health monitor, speed test, domain models. No UI, no database.
+src/CyberneticBandwidth.Data    SQLite schema, repositories, rollup and retention.
+src/CyberneticBandwidth.App     WPF shell, pages and view models, theme, tray icon, alerts, preferences.
 build/               Publish, install, uninstall, transfer packages and guides, probe, icon generation.
 ```
 
@@ -386,7 +393,7 @@ Background work runs as hosted services in Core, each on its own cadence: `Netwo
 `ConnectionHealthMonitor`. They publish through `LiveActivityBroker`, which marshals to the UI
 thread and keeps the latest network snapshot and health sample for pages opened later. Nothing in
 Core references WPF; switches the user controls reach Core through `MonitoringSettings`.
-`HostingExtensions.AddNetTrace` registers these per `CollectorMode`: all of them in the usual app and
+`HostingExtensions.AddCyberneticBandwidth` registers these per `CollectorMode`: all of them in the usual app and
 the service, none in a viewer, which gets the broker's events over the collector link instead.
 
 Pages resolve by view-model type through `DataTemplate`s in `App.xaml`, and the view models are
@@ -450,21 +457,21 @@ so they measure round trips rather than handshakes, and thin to one in ten on me
 
 ## Troubleshooting
 
-The log in `%LocalAppData%\NetTrace\logs` is the first stop; Settings and About both open the folder.
-While the service is installed, its own log is in `%ProgramData%\NetTrace\logs`.
+The log in `%LocalAppData%\CyberneticBandwidth\logs` is the first stop; Settings and About both open the folder.
+While the service is installed, its own log is in `%ProgramData%\CyberneticBandwidth\logs`.
 
 | Symptom | Likely cause |
 |---|---|
 | Most traffic belongs to one security or VPN client | It carries everyone's traffic. Byte counts, quality and speed describe the tunnel; see the Network page |
 | Speed test download far below upload, or very different between runs | A security proxy buffering downloads before passing them on. Compare a test with the proxy off, if you are allowed to |
-| Wi-Fi signal shows as a coarse value or "unknown" | Windows 11 24H2 and later withhold detailed Wi-Fi data unless location access for desktop apps is on; NetTrace falls back to signal bars |
+| Wi-Fi signal shows as a coarse value or "unknown" | Windows 11 24H2 and later withhold detailed Wi-Fi data unless location access for desktop apps is on; Cybernetic Bandwidth Monitor falls back to signal bars |
 | Router latency shows "no reply" | The router ignores ping. Quality still works from the internet check; only the local/internet split is lost |
 | No tray icon | Windows 11 puts new icons in the overflow flyout; see [Running in the background](#running-in-the-background) |
-| Install fails to copy `NetTrace.exe` | NetTrace is still running. Exit it from the tray, then install again |
-| Banner: "The NetTrace service is not answering" | The service is stopped or starting. Settings › Running in the background shows its state and can start it |
+| Install fails to copy `CyberneticBandwidth.exe` | Cybernetic Bandwidth Monitor is still running. Exit it from the tray, then install again |
+| Banner: "The Cybernetic Bandwidth Monitor service is not answering" | The service is stopped or starting. Settings › Running in the background shows its state and can start it |
 | Settings offers **Update service** | The window and the service are different versions, usually after upgrading the window. Update copies this version over |
 | `uninstall-peruser.ps1` stops at once | The service is installed. Remove it in Settings first, which also brings the history back to your profile |
-| Trends detail is hourly for a recent day | Minute data does not cover the whole day, usually because NetTrace was not running for part of it |
+| Trends detail is hourly for a recent day | Minute data does not cover the whole day, usually because Cybernetic Bandwidth Monitor was not running for part of it |
 
 ## Where to take it next
 
