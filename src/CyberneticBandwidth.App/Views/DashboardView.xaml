@@ -3,12 +3,22 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="clr-namespace:CyberneticBandwidth.App.Converters"
              xmlns:ui="clr-namespace:CyberneticBandwidth.App.Controls"
+             xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF">
 
   <UserControl.Resources>
     <conv:BytesConverter x:Key="Bytes" />
     <conv:RateConverter x:Key="Rate" />
     <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
+    <conv:ZeroToVisibleConverter x:Key="ZeroToVisible" />
+
+    <!-- Busiest first, and kept that way as the minute's figures arrive. Clicking a column header
+         sorts by that column instead, and live sorting follows the new order. -->
+    <CollectionViewSource x:Key="AppsByTraffic" Source="{Binding Apps}" IsLiveSortingRequested="True">
+      <CollectionViewSource.SortDescriptions>
+        <scm:SortDescription PropertyName="Total" Direction="Descending" />
+      </CollectionViewSource.SortDescriptions>
+    </CollectionViewSource>
   </UserControl.Resources>
 
   <!-- Wide: fills the window, the chart and tables sharing its height. Narrow or short: scrolls. -->
@@ -151,21 +161,24 @@
               </Grid.ColumnDefinitions>
               <StackPanel>
                 <TextBlock Text="Throughput" Style="{StaticResource HeadingText}" />
-                <TextBlock Text="The last five minutes, second by second" Style="{StaticResource MutedText}" Margin="0,1,0,0" />
+                <TextBlock Text="{Binding ThroughputSummary}" Style="{StaticResource MutedText}" Margin="0,1,0,0"
+                           TextTrimming="CharacterEllipsis" />
               </StackPanel>
+              <!-- Rounded swatches, like the areas they name; which side of zero each takes is on the scale. -->
               <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,4,0,0">
-                <Ellipse Width="8" Height="8" Fill="{DynamicResource DownloadBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="down, above" Style="{StaticResource MutedText}" Margin="6,0,14,0" />
-                <Ellipse Width="8" Height="8" Fill="{DynamicResource UploadBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="up, below" Style="{StaticResource MutedText}" Margin="6,0,0,0" />
+                <Border Width="12" Height="4" CornerRadius="2" Background="{DynamicResource DownloadBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="Download" Style="{StaticResource MutedText}" Margin="6,0,14,0" />
+                <Border Width="12" Height="4" CornerRadius="2" Background="{DynamicResource UploadBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="Upload" Style="{StaticResource MutedText}" Margin="6,0,0,0" />
               </StackPanel>
             </Grid>
             <!-- A running strip: redrawn each second without animation, so moving the time window or
                  changing the scale never plays as a zoom. -->
-            <lvc:CartesianChart Margin="8,4,12,8"
+            <lvc:CartesianChart Margin="8,6,14,10"
                                 Series="{Binding ThroughputSeries}"
                                 XAxes="{Binding ThroughputXAxes}"
                                 YAxes="{Binding ThroughputYAxes}"
+                                Sections="{Binding ThroughputSections}"
                                 LegendPosition="Hidden"
                                 TooltipPosition="Top"
                                 TooltipTextPaint="{Binding TooltipTextPaint}"
@@ -235,20 +248,35 @@
                          Style="{StaticResource MutedText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
             </StackPanel>
 
-            <DataGrid ItemsSource="{Binding Apps}" Margin="8,0,8,8" CanUserSortColumns="True">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Application" Binding="{Binding DisplayName}" Width="2*" MinWidth="140" />
-                <DataGridTextColumn Header="Down" Width="*" MinWidth="70" SortMemberPath="BytesReceived"
-                                    Binding="{Binding BytesReceived, Converter={StaticResource Bytes}}"
-                                    ElementStyle="{StaticResource NumericText}" />
-                <DataGridTextColumn Header="Up" Width="*" MinWidth="70" SortMemberPath="BytesSent"
-                                    Binding="{Binding BytesSent, Converter={StaticResource Bytes}}"
-                                    ElementStyle="{StaticResource NumericText}" />
-                <DataGridTextColumn Header="Last minute" Width="*" MinWidth="80" SortMemberPath="RecentBytesPerSecond"
-                                    Binding="{Binding RecentBytesPerSecond, Converter={StaticResource Rate}}"
-                                    ElementStyle="{StaticResource NumericText}" />
-              </DataGrid.Columns>
-            </DataGrid>
+            <Grid>
+              <DataGrid ItemsSource="{Binding Source={StaticResource AppsByTraffic}}" Margin="8,0,8,8" CanUserSortColumns="True">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Application" Binding="{Binding DisplayName}" Width="2*" MinWidth="140" />
+                  <DataGridTextColumn Header="Down" Width="*" MinWidth="70" SortMemberPath="BytesReceived"
+                                      Binding="{Binding BytesReceived, Converter={StaticResource Bytes}}"
+                                      ElementStyle="{StaticResource NumericText}" />
+                  <DataGridTextColumn Header="Up" Width="*" MinWidth="70" SortMemberPath="BytesSent"
+                                      Binding="{Binding BytesSent, Converter={StaticResource Bytes}}"
+                                      ElementStyle="{StaticResource NumericText}" />
+                  <DataGridTextColumn Header="Last minute" Width="*" MinWidth="80" SortMemberPath="RecentBytesPerSecond"
+                                      Binding="{Binding RecentBytesPerSecond, Converter={StaticResource Rate}}"
+                                      ElementStyle="{StaticResource NumericText}" />
+                </DataGrid.Columns>
+              </DataGrid>
+
+              <!-- Windows reports usage about once a minute, so a fresh start has nothing to show for a
+                   while. Said plainly, so an empty table does not look broken. -->
+              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24,40,24,24" MaxWidth="340"
+                          IsHitTestVisible="False"
+                          Visibility="{Binding Apps.Count, Converter={StaticResource ZeroToVisible}}">
+                <TextBlock Text="&#xE916;" Style="{StaticResource IconText}" FontSize="22" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource MutedBrush}" />
+                <TextBlock Text="Waiting for Windows' first usage report" Style="{StaticResource BodyText}" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0" />
+                <TextBlock Text="Applications appear here within about a minute of starting."
+                           Style="{StaticResource MutedText}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
           </DockPanel>
         </Border>
 

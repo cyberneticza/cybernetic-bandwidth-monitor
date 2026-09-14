@@ -79,6 +79,18 @@ public sealed partial class DashboardViewModel : ObservableObject
     public Axis[] ThroughputXAxes { get; }
     public Axis[] ThroughputYAxes { get; }
 
+    /// <summary>
+    /// Shades the part of the five-minute window from before this session started, so a chart that
+    /// is still filling reads as "recording since" rather than as five minutes of nothing.
+    /// </summary>
+    public RectangularSection[] ThroughputSections { get; }
+
+    private readonly RectangularSection _notRecorded;
+    private DateTime? _recordingSince;
+
+    /// <summary>Under the Throughput heading: the window's peaks each way.</summary>
+    [ObservableProperty] private string _throughputSummary = "The last five minutes";
+
     public DashboardViewModel(
         LiveActivityBroker broker,
         IconCache icons,
@@ -117,9 +129,13 @@ public sealed partial class DashboardViewModel : ObservableObject
         [
             new Axis
             {
+                // Whole minutes, which move along with the data, rather than whatever odd seconds
+                // happen to divide the window evenly.
                 Labeler = value => SafeTicksToTime(value),
                 UnitWidth = TimeSpan.FromSeconds(1).Ticks,
-                MinStep = TimeSpan.FromSeconds(30).Ticks,
+                MinStep = TimeSpan.FromMinutes(1).Ticks,
+                ForceStepToMin = true,
+                TextSize = AxisTextSize,
                 SeparatorsPaint = null
             }
         ];
@@ -137,11 +153,15 @@ public sealed partial class DashboardViewModel : ObservableObject
                 },
                 MinLimit = -MinimumScale,
                 MaxLimit = MinimumScale,
-                // Five labels whatever the scale: both limits, halfway each way, and zero.
-                MinStep = MinimumScale / 2,
-                ForceStepToMin = true
+                // Three labels whatever the scale: the top, zero and the bottom.
+                MinStep = MinimumScale,
+                ForceStepToMin = true,
+                TextSize = AxisTextSize
             }
         ];
+
+        _notRecorded = new RectangularSection { IsVisible = false, LabelSize = 11 };
+        ThroughputSections = [_notRecorded];
 
         ApplyTheme(theme.Chart);
         theme.ThemeChanged += () => ApplyTheme(theme.Chart);
@@ -207,14 +227,18 @@ public sealed partial class DashboardViewModel : ObservableObject
     /// </summary>
     private void ApplyTheme(ChartTheme theme)
     {
-        _download.Stroke = ChartPaints.Stroke(theme.Download);
-        _download.Fill = ChartPaints.Fill(theme.Download, 48);
-        _upload.Stroke = ChartPaints.Stroke(theme.Upload);
-        _upload.Fill = ChartPaints.Fill(theme.Upload, 48);
+        // Each area fades towards the zero line: strongest at the line, where the reading is.
+        _download.Stroke = ChartPaints.Stroke(theme.Download, 1.5f);
+        _download.Fill = ChartPaints.VerticalFade(theme.Download, 90, 8);
+        _upload.Stroke = ChartPaints.Stroke(theme.Upload, 1.5f);
+        _upload.Fill = ChartPaints.VerticalFade(theme.Upload, 8, 90);
 
         ThroughputXAxes[0].LabelsPaint = ChartPaints.Labels(theme);
         ThroughputYAxes[0].LabelsPaint = ChartPaints.Labels(theme);
         ThroughputYAxes[0].SeparatorsPaint = ChartPaints.Separators(theme);
+
+        _notRecorded.Fill = ChartPaints.Fill(theme.Muted, 18);
+        _notRecorded.LabelPaint = ChartPaints.Labels(theme);
 
         TooltipTextPaint = ChartPaints.Text(theme);
         TooltipBackgroundPaint = ChartPaints.TooltipBackground(theme);
@@ -235,30 +259,48 @@ public sealed partial class DashboardViewModel : ObservableObject
         // Always the last five minutes, ending now: the chart runs right to left from the first
         // second instead of stretching a few seconds of data across its whole width.
         var x = ThroughputXAxes[0];
-        x.MinLimit = now.AddSeconds(-HistorySeconds).Ticks;
+        var windowStart = now.AddSeconds(-HistorySeconds);
+        x.MinLimit = windowStart.Ticks;
         x.MaxLimit = now.Ticks;
+
+        _recordingSince ??= now;
+        bool filling = _recordingSince > windowStart;
+        _notRecorded.IsVisible = filling;
+        if (filling)
+        {
+            _notRecorded.Xi = windowStart.Ticks;
+            _notRecorded.Xj = _recordingSince.Value.Ticks;
+            // Captioned while the shading is wide enough to hold it; a closing sliver needs none.
+            _notRecorded.Label = _recordingSince.Value - windowStart >= TimeSpan.FromSeconds(75)
+                ? $"Recording since {_recordingSince.Value:HH:mm}"
+                : string.Empty;
+        }
+
+        double peakDown = DownloadPoints.Max(p => p.Value ?? 0);
+        double peakUp = UploadPoints.Max(p => -(p.Value ?? 0));
+        ThroughputSummary = $"Last five minutes · peak ↓ {ByteFormat.Rate(peakDown)}, ↑ {ByteFormat.Rate(peakUp)}";
 
         // The same scale above and below the line, so zero sits in the middle and a burst either
         // way is drawn to the same size. Left to itself the axis fits only the data, and a quiet
         // download with an upload burst puts zero at the very top. The scale moves in doublings,
         // so it changes only when traffic crosses one, not with every second's peak.
-        double peak = Math.Max(
-            DownloadPoints.Max(p => p.Value ?? 0),
-            UploadPoints.Max(p => -(p.Value ?? 0)));
         double limit = MinimumScale;
-        while (limit < peak * 1.15) limit *= 2;
+        while (limit < Math.Max(peakDown, peakUp) * 1.15) limit *= 2;
 
         var y = ThroughputYAxes[0];
         if (y.MaxLimit != limit)
         {
             y.MinLimit = -limit;
             y.MaxLimit = limit;
-            y.MinStep = limit / 2;
+            y.MinStep = limit;
         }
     }
 
     /// <summary>The smallest half-range of the throughput chart, so an idle link is not all noise.</summary>
     private const double MinimumScale = 16 * 1024;
+
+    /// <summary>Axis labels at the size of the page's small text, rather than LiveCharts' larger default.</summary>
+    private const float AxisTextSize = 12;
 
     private void OnUsage(IReadOnlyList<UsageSample> samples)
     {
@@ -357,6 +399,6 @@ public sealed partial class DashboardViewModel : ObservableObject
     private static string SafeTicksToTime(double value)
     {
         if (value < DateTime.MinValue.Ticks || value > DateTime.MaxValue.Ticks) return string.Empty;
-        return new DateTime((long)value).ToString("HH:mm:ss");
+        return new DateTime((long)value).ToString("HH:mm");
     }
 }

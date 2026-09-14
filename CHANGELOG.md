@@ -82,6 +82,14 @@ major for changes that break the database or the install layout. The version its
   seconds arriving on the right from the moment the app starts, and redraws without animation, so
   it no longer appears to zoom in and out as traffic comes and goes. Its scale changes in doublings
   (16 KB/s, 32 KB/s, …) instead of following every burst.
+- **A cleaner Live page.** The throughput chart labels whole minutes (20:15, 20:16) instead of odd
+  seconds, shows only its top, zero and bottom on the scale, in smaller muted text, and fades each
+  area towards the zero line. While the five minutes are still filling, the part from before the
+  app started is shaded and captioned "Recording since 20:15" rather than left blank. The heading
+  shows the window's peak download and upload, and the legend reads Download and Upload.
+  "Traffic by application" lists the busiest applications first and keeps that order as figures
+  arrive (a column header still sorts by that column), and says it is waiting for Windows' first
+  usage report instead of showing an empty table for the first minute.
 - **Start at sign-in uses a scheduled task** (Settings › Running in the background) instead of the
   `Run` registry key, so Cybernetic Bandwidth Monitor starts promptly after sign-in and Task Manager's startup list does
   not switch it off. It still needs no administrator rights. An existing `Run` entry for the same copy

@@ -20,6 +20,13 @@ public static class ChartPaints
 
     public static SolidColorPaint Fill(SKColor colour, byte alpha = 255) => new(colour.WithAlpha(alpha));
 
+    /// <summary>
+    /// A fill that fades from <paramref name="top"/> alpha at the top of the shape it paints to
+    /// <paramref name="bottom"/> alpha at its bottom, for areas that should not read as solid blocks.
+    /// </summary>
+    public static LinearGradientPaint VerticalFade(SKColor colour, byte top, byte bottom) =>
+        new([colour.WithAlpha(top), colour.WithAlpha(bottom)], new SKPoint(0.5f, 0), new SKPoint(0.5f, 1));
+
     public static SolidColorPaint Stroke(SKColor colour, float thickness = 1.5f) =>
         new(colour) { StrokeThickness = thickness };
 }
