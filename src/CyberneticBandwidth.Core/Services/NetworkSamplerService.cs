@@ -191,7 +191,12 @@ public sealed class NetworkSamplerService(
         var to = DateTimeOffset.UtcNow;
 
         var samples = await _source.GetUsageAsync(from, to, Granularity.Minute, ct);
-        if (samples.Count == 0) return;
+        if (samples.Count == 0)
+        {
+            // Nothing to store, but still news: the live table's "Last minute" rates fall to zero.
+            broker.PublishUsage(samples);
+            return;
+        }
 
         await repo.UpsertBucketsAsync(samples, ct);
 

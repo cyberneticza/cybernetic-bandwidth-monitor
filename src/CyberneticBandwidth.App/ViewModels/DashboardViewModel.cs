@@ -285,10 +285,28 @@ public sealed partial class DashboardViewModel : ObservableObject
             // Merge in place. Rebuilding the collection on every tick would throw away the user's
             // sort, their selection and their scroll position.
             row.Add(sentDelta, receivedDelta);
-            row.RecentBytesPerSecond = (sentDelta + receivedDelta) / 60d;
         }
 
+        UpdateLastMinute(samples);
         TrimSeen();
+    }
+
+    /// <summary>
+    /// "Last minute" is the last finished minute; the current one is still filling. Every read covers
+    /// the last few minutes, so an app missing from that minute in this read used nothing in it and
+    /// drops to zero, rather than keeping whatever rate it had when it was last seen.
+    /// </summary>
+    private void UpdateLastMinute(IReadOnlyList<UsageSample> samples)
+    {
+        long lastMinute = DateTimeOffset.UtcNow.FloorTo(Granularity.Minute).AddMinutes(-1).ToUnixTimeSeconds();
+
+        var bytes = samples
+            .Where(s => s.Granularity == Granularity.Minute && s.BucketStartUtc.ToUnixTimeSeconds() == lastMinute)
+            .GroupBy(s => s.AttributionId, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Sum(s => s.Total), StringComparer.Ordinal);
+
+        foreach (var row in Apps)
+            row.RecentBytesPerSecond = bytes.GetValueOrDefault(row.AttributionId) / 60d;
     }
 
     private void TrimSeen()

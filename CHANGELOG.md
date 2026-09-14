@@ -118,6 +118,10 @@ major for changes that break the database or the install layout. The version its
 
 ### Fixed
 
+- Live's "Traffic by application" table showed a stale "Last minute" rate: an application that
+  stopped using the network kept its old rate indefinitely, and one that was still active could show
+  the rate of an older minute. It is now each application's traffic in the last finished minute,
+  refreshed for every row each minute, and falls to 0 B/s for applications that went quiet.
 - Chart hover details were cut off at the chart's edges, worst on History's stacked "Top
   applications over time" with seven rows. Every chart's hover details now open in a panel beside
   the pointer that can extend past the chart and flips to the other side near the window's edges.
