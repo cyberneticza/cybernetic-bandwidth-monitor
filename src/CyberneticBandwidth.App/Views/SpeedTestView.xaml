@@ -255,7 +255,9 @@
                 <StackPanel Margin="0,0,12,0">
                   <TextBlock Text="Around the world" Style="{StaticResource HeadingText}" />
                   <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"
-                             Text="Response time and download speed to test servers in fixed cities, for how services hosted far away will feel. About 8 seconds a region, one at a time; these servers take no uploads." />
+                             Text="Response time, download and upload to test servers in fixed cities, for how services hosted far away will feel. One region at a time, about 15 seconds each." />
+                  <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                             Text="Upload is measured in London, Frankfurt, New Jersey (to New York), Los Angeles and Tokyo. The other cities have no public test server that accepts uploads." />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
                   <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,8,0"
@@ -278,17 +280,20 @@
                            Visibility="{Binding RegionsCompareNote, Converter={StaticResource NullToVisibility}}" />
               </StackPanel>
 
+              <!-- Column widths match the rows below. -->
               <Grid DockPanel.Dock="Top" Margin="16,10,16,4">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="84" />
-                  <ColumnDefinition Width="92" />
-                  <ColumnDefinition Width="100" />
+                  <ColumnDefinition Width="70" />
+                  <ColumnDefinition Width="80" />
+                  <ColumnDefinition Width="80" />
+                  <ColumnDefinition Width="52" />
                   <ColumnDefinition Width="36" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Server" Style="{StaticResource MutedText}" />
                 <TextBlock Grid.Column="1" Text="Response" Style="{StaticResource MutedText}" HorizontalAlignment="Right" />
                 <TextBlock Grid.Column="2" Text="Download" Style="{StaticResource MutedText}" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="3" Text="Upload" Style="{StaticResource MutedText}" HorizontalAlignment="Right" />
               </Grid>
 
               <ItemsControl ItemsSource="{Binding Regions}" Margin="8,0,8,4">
@@ -308,9 +313,10 @@
                       <Grid>
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="*" />
-                          <ColumnDefinition Width="84" />
-                          <ColumnDefinition Width="92" />
-                          <ColumnDefinition Width="100" />
+                          <ColumnDefinition Width="70" />
+                          <ColumnDefinition Width="80" />
+                          <ColumnDefinition Width="80" />
+                          <ColumnDefinition Width="52" />
                           <ColumnDefinition Width="36" />
                         </Grid.ColumnDefinitions>
 
@@ -340,9 +346,13 @@
                           <TextBlock Text="{Binding Download}" Style="{StaticResource NumericText}" Foreground="{DynamicResource DownloadBrush}" />
                           <TextBlock DataContext="{Binding DownloadChange}" Style="{StaticResource ChangeText}" HorizontalAlignment="Right" />
                         </StackPanel>
-                        <ProgressBar Grid.Column="3" Value="{Binding DownloadFraction, Mode=OneWay}" Margin="14,0,4,0"
-                                     VerticalAlignment="Center" />
-                        <Button Grid.Column="4" Style="{StaticResource IconButton}" Content="&#xE768;"
+                        <StackPanel Grid.Column="3" VerticalAlignment="Center" Background="Transparent" ToolTip="{Binding UploadNote}">
+                          <TextBlock Text="{Binding Upload}" Style="{StaticResource NumericText}" Foreground="{DynamicResource UploadBrush}" />
+                          <TextBlock DataContext="{Binding UploadChange}" Style="{StaticResource ChangeText}" HorizontalAlignment="Right" />
+                        </StackPanel>
+                        <ProgressBar Grid.Column="4" Value="{Binding DownloadFraction, Mode=OneWay}" Margin="12,0,4,0"
+                                     VerticalAlignment="Center" ToolTip="Download against the fastest region" />
+                        <Button Grid.Column="5" Style="{StaticResource IconButton}" Content="&#xE768;"
                                 ToolTip="Test just this region"
                                 Command="{Binding DataContext.TestRegionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}" />
@@ -374,8 +384,10 @@
               <TextBlock Text="By region" Style="{StaticResource HeadingText}" />
               <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0" TextWrapping="Wrap">
                 <Run Text="■" Foreground="{DynamicResource DownloadBrush}" />
-                <Run Text="download (left scale)" />
-                <Run Text="  ●" Foreground="{DynamicResource UploadBrush}" />
+                <Run Text="download" />
+                <Run Text="  ■" Foreground="{DynamicResource UploadBrush}" />
+                <Run Text="upload (left scale)" />
+                <Run Text="  ●" Foreground="{DynamicResource TextBrush}" />
                 <Run Text="response time (right scale)" />
               </TextBlock>
               <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap"
@@ -405,6 +417,7 @@
                 <DataGridTextColumn Header="Server" Binding="{Binding City}" Width="130" />
                 <DataGridTextColumn Header="Response" Binding="{Binding Latency}" Width="80" ElementStyle="{StaticResource NumericText}" />
                 <DataGridTextColumn Header="Download" Binding="{Binding Download}" Width="90" ElementStyle="{StaticResource NumericText}" />
+                <DataGridTextColumn Header="Upload" Binding="{Binding Upload}" Width="90" ElementStyle="{StaticResource NumericText}" />
                 <DataGridTextColumn Header="Network or problem" Binding="{Binding Note}" Width="*" />
               </DataGrid.Columns>
             </DataGrid>

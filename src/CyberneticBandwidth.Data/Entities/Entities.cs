@@ -76,6 +76,7 @@ public sealed class RegionalSpeedTestEntity
     public double? LatencyMs { get; set; }
     public double? JitterMs { get; set; }
     public double? DownloadMbps { get; set; }
+    public double? UploadMbps { get; set; }
     public long BytesUsed { get; set; }
     public string? NetworkName { get; set; }
     public string? Error { get; set; }

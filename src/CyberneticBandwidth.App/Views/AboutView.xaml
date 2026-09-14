@@ -52,7 +52,7 @@
 
           <TextBlock Text="Your data stays here" Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,16,0,0" />
           <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="20"
-                     Text="History is kept in a local database in the data folder below and is never uploaded. Cybernetic Bandwidth Monitor only goes online for two things you can see and control: the connection quality check (a tiny request to Cloudflare every 30 seconds, which can be turned off in Settings) and speed tests you start yourself (to Cloudflare, and to Vultr for the regional test). Neither sends anything about you or your usage." />
+                     Text="History is kept in a local database in the data folder below and is never uploaded. Cybernetic Bandwidth Monitor only goes online for two things you can see and control: the connection quality check (a tiny request to Cloudflare every 30 seconds, which can be turned off in Settings) and speed tests you start yourself (to Cloudflare, and to Vultr and LibreSpeed servers for the regional test). Neither sends anything about you or your usage." />
         </StackPanel>
       </Border>
 

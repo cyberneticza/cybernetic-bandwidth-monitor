@@ -135,12 +135,21 @@ public enum SpeedTestPhase
 /// <summary>Reported a few times a second while a test runs.</summary>
 public readonly record struct SpeedTestProgress(SpeedTestPhase Phase, double Fraction, double? CurrentMbps, double? LatencyMs);
 
-/// <summary>A fixed-location test server, for measuring the connection to one part of the world.</summary>
-public sealed record SpeedTestRegion(string Code, string City, string Country, string Continent, Uri TestFile);
+/// <summary>
+/// A fixed-location test server, for measuring the connection to one part of the world.
+/// <see cref="UploadUrl"/> is a separate server that accepts uploads, where one exists near enough;
+/// <see cref="UploadCity"/> names its city when that is not <see cref="City"/>.
+/// </summary>
+public sealed record SpeedTestRegion(
+    string Code, string City, string Country, string Continent, Uri TestFile,
+    Uri? UploadUrl = null, string? UploadCity = null)
+{
+    public bool MeasuresUpload => UploadUrl is not null;
+}
 
 /// <summary>
-/// One region's result. Latency and download are null when that part failed; <see cref="Error"/>
-/// says why. Regional servers take no uploads, so there is no upload figure.
+/// One region's result. Latency, download and upload are null when that part failed or, for upload,
+/// when the region has no upload server; <see cref="Error"/> says what went wrong.
 /// </summary>
 public sealed record RegionalSpeedResult(
     DateTimeOffset ObservedUtc,
@@ -148,6 +157,7 @@ public sealed record RegionalSpeedResult(
     double? LatencyMs,
     double? JitterMs,
     double? DownloadMbps,
+    double? UploadMbps,
     long BytesUsed,
     string? NetworkName,
     string? Error);

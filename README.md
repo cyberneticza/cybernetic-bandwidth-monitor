@@ -90,8 +90,9 @@ needs `SeSystemProfilePrivilege`. So Cybernetic Bandwidth Monitor fuses sources 
 | Ping to the router, HTTPS to Cloudflare | Connection quality: latency, jitter, failed requests | 30 seconds |
 | speed.cloudflare.com endpoints | Download, upload, latency and jitter to the nearest data centre | When the user runs a test |
 | Vultr public speed-test hosts in ten cities | Latency and download to each part of the world | When the user runs a regional test |
+| LibreSpeed public servers in five of those cities | Upload to that part of the world | When the user runs a regional test |
 
-The last three are the only network traffic Cybernetic Bandwidth Monitor creates; see
+The last four are the only network traffic Cybernetic Bandwidth Monitor creates; see
 [The connection itself](#the-connection-itself).
 
 Two consequences worth internalising before you extend this:
@@ -277,8 +278,17 @@ listed in `SpeedTestService.Regions`. Each region gets two warm-up requests (thr
 second still pays for the proxy's onward connection), five timed 1-byte range requests for latency,
 and six seconds of ranged downloads, with a 25-second cap per region so one slow server cannot stall
 the run. Regions run one at a time, never in parallel with each other or with the Cloudflare test.
-These servers accept no uploads. A run of all ten takes about a minute and a half. A region whose
-download never starts within its cap is stored as not measured rather than 0 Mbps.
+A region whose download never starts within its cap is stored as not measured rather than 0 Mbps.
+
+Vultr's servers accept no uploads, so upload goes to a second server: one from LibreSpeed's public
+list (`librespeed.org/backend-servers/servers.php`), which takes POSTed bytes at `empty.php`. That
+list has servers in London, Frankfurt, New York (used for New Jersey, about 15 km away; the page says
+so), Los Angeles and Tokyo, and none in Johannesburg, Mumbai, Singapore, São Paulo or Sydney, which
+therefore measure no upload. Upload runs after the download for six seconds with its own 25-second
+cap, the same way as the Cloudflare upload: random bytes in requests growing from 1 MB, each timed
+from send to the server's response. An upload that fails keeps the region's download and records the
+reason. Where the list changes, `SpeedTestService.Regions` is the one place to update. A run of all
+ten takes about two minutes.
 
 Comparing with the previous test (`ChangeInfo` in `SpeedTestViewModel`) treats differences under 3%
 as "≈ same", since two back-to-back tests never match exactly. The Local tab compares the test on
@@ -296,7 +306,7 @@ and at 80% and 100% of an optional daily or billing-month budget (once per level
 across restarts).
 
 **Privacy.** Apart from the quality checks (which can be turned off) and speed tests the user starts
-(to Cloudflare, and to Vultr for the regional test), Cybernetic Bandwidth Monitor makes no network requests, and nothing
+(to Cloudflare, and to Vultr and LibreSpeed servers for the regional test), Cybernetic Bandwidth Monitor makes no network requests, and nothing
 it records leaves the PC.
 
 ## Light and dark

@@ -24,7 +24,7 @@ public sealed class SchemaInitializer(
     IOptions<StorageOptions> storage,
     ILogger<SchemaInitializer> log) : ISchemaInitializer
 {
-    private const int SchemaVersion = 3;
+    private const int SchemaVersion = 4;
 
     public async Task InitializeAsync(CancellationToken ct = default)
     {
@@ -152,6 +152,14 @@ public sealed class SchemaInitializer(
 
             CREATE INDEX IF NOT EXISTS IX_RegionalSpeedTests_Region ON RegionalSpeedTests(RegionCode, ObservedUnix);
             """, ct);
+
+        // Version 4: regional upload. Added to an existing table rather than written into the CREATE
+        // above, which a version 3 database has already run and skips.
+        int hasUpload = await db.Database
+            .SqlQueryRaw<int>("SELECT COUNT(*) AS Value FROM pragma_table_info('RegionalSpeedTests') WHERE name = 'UploadMbps'")
+            .SingleAsync(ct);
+        if (hasUpload == 0)
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE RegionalSpeedTests ADD COLUMN UploadMbps REAL NULL", ct);
 
         // MAX() always yields exactly one row, so Single; First without an OrderBy logs an EF warning.
         int current = await db.Database

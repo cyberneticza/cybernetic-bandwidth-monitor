@@ -42,7 +42,7 @@ public sealed record SuitabilityRow(string Activity, bool IsOk, string Detail, s
 
 public sealed record SpeedTestRow(string When, string Network, string Download, string Upload, string Latency, bool IsCompared);
 
-public sealed record RegionHistoryRow(string When, string City, string Latency, string Download, string Note, bool HasError);
+public sealed record RegionHistoryRow(string When, string City, string Latency, string Download, string Upload, string Note, bool HasError);
 
 public enum SpeedTestTab
 {
@@ -57,14 +57,21 @@ public sealed partial class RegionRow(SpeedTestRegion region) : ObservableObject
     public string City => Region.City;
     public string Place => $"{Region.Country} · {Region.Continent}";
 
+    /// <summary>Where upload goes, or why it is not measured; the upload figure's tooltip.</summary>
+    public string UploadNote => Region.UploadCity is { } city ? $"Upload is measured to a server in {city}."
+        : Region.MeasuresUpload ? $"Upload is measured to a server in {Region.City}."
+        : "Upload is not measured here: there is no public test server in this city that accepts uploads.";
+
     [ObservableProperty] private string _latency = "—";
     [ObservableProperty] private string _download = "—";
+    [ObservableProperty] private string _upload = "—";
     [ObservableProperty] private double _downloadFraction;
     [ObservableProperty] private string _status = "Not tested yet";
     [ObservableProperty] private bool _isTesting;
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private ChangeInfo? _latencyChange;
     [ObservableProperty] private ChangeInfo? _downloadChange;
+    [ObservableProperty] private ChangeInfo? _uploadChange;
 
     public RegionalSpeedResult? Latest { get; set; }
     public RegionalSpeedResult? Previous { get; set; }
@@ -73,7 +80,8 @@ public sealed partial class RegionRow(SpeedTestRegion region) : ObservableObject
 /// <summary>
 /// The Speed test page, in two tabs that each carry their own verdicts, chart, table and comparison:
 ///  - <b>Local</b>: Cloudflare's nearest data centre, download, upload, response time and jitter.
-///  - <b>Around the world</b>: fixed servers in ten cities, response time and download per region.
+///  - <b>Around the world</b>: fixed servers in ten cities, response time and download per region,
+///    and upload where the region has an upload server.
 /// </summary>
 public sealed partial class SpeedTestViewModel : ObservableObject
 {
@@ -466,7 +474,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
         {
             _regionsMeteredConfirmed = true;
             RegionsStartLabel = "Run anyway";
-            RegionsWarning = "This connection is metered. Each region downloads for about 6 seconds, typically 5 to 50 MB.";
+            RegionsWarning = "This connection is metered. Each region downloads for about 6 seconds and, where it can, uploads for about 6 more, typically 5 to 100 MB.";
             return;
         }
 
@@ -478,7 +486,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
         {
             row.IsTesting = true;
             row.Status = "Waiting…";
-            row.LatencyChange = row.DownloadChange = null;
+            row.LatencyChange = row.DownloadChange = row.UploadChange = null;
         }
         _cancel = new CancellationTokenSource();
 
@@ -527,6 +535,10 @@ public sealed partial class SpeedTestViewModel : ObservableObject
                 row.Status = "Measuring download…";
                 if (p.CurrentMbps is { } mbps) row.Download = Mbps(mbps);
                 break;
+            case SpeedTestPhase.Upload:
+                row.Status = row.Region.UploadCity is { } city ? $"Measuring upload to {city}…" : "Measuring upload…";
+                if (p.CurrentMbps is { } up) row.Upload = Mbps(up);
+                break;
             case SpeedTestPhase.Done:
                 row.IsTesting = false;
                 break;
@@ -560,6 +572,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
                     region?.City ?? h.RegionCode,
                     NetworkDisplay.Milliseconds(h.LatencyMs),
                     h.DownloadMbps is { } mbps ? Mbps(mbps) : "—",
+                    h.UploadMbps is { } up ? Mbps(up) : "—",
                     h.Error ?? h.NetworkName ?? string.Empty,
                     h.Error is not null));
             }
@@ -576,7 +589,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
     {
         if (row.Latest is not { } result)
         {
-            row.Latency = row.Download = "—";
+            row.Latency = row.Download = row.Upload = "—";
             row.Status = "Not tested yet";
             row.HasError = false;
             return;
@@ -584,6 +597,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
 
         row.Latency = NetworkDisplay.Milliseconds(result.LatencyMs);
         row.Download = result.DownloadMbps is { } mbps ? Mbps(mbps) : "—";
+        row.Upload = result.UploadMbps is { } up ? Mbps(up) : "—";
         row.HasError = result.Error is not null;
         row.Status = result.Error is { } error
             ? $"{error} · {NetworkDisplay.When(result.ObservedUtc)}"
@@ -600,6 +614,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
             bool compare = CompareRegions && row.Latest is not null && row.Previous is not null;
             row.LatencyChange = compare ? ChangeInfo.Between(row.Latest!.LatencyMs, row.Previous!.LatencyMs, false, v => $"{v:0} ms") : null;
             row.DownloadChange = compare ? ChangeInfo.Between(row.Latest!.DownloadMbps, row.Previous!.DownloadMbps, true, Mbps) : null;
+            row.UploadChange = compare ? ChangeInfo.Between(row.Latest!.UploadMbps, row.Previous!.UploadMbps, true, Mbps) : null;
         }
 
         var measured = Regions.Where(r => r.Latest?.LatencyMs is not null).ToList();
@@ -646,7 +661,10 @@ public sealed partial class SpeedTestViewModel : ObservableObject
             double mbps = result.DownloadMbps ?? 0;
             double jitter = result.JitterMs ?? 0;
 
-            string calls = ms < 150 && jitter < 30 && mbps >= 4 ? "video calls feel natural"
+            // Upload only counts against calls where it was measured; most regions have no upload server.
+            bool uploadHolds = result.UploadMbps is not { } up || up >= 4;
+            string calls = ms < 150 && jitter < 30 && mbps >= 4 && uploadHolds ? "video calls feel natural"
+                : ms < 150 && jitter < 30 && mbps >= 4 ? "calls connect quickly, but your own video may blur"
                 : ms < 300 && mbps >= 2 ? "calls work with a noticeable delay"
                 : "calls will lag and talk over each other";
             string downloads = mbps >= 25 ? "downloads and 4K from services hosted there are fast"
@@ -655,18 +673,22 @@ public sealed partial class SpeedTestViewModel : ObservableObject
                 : "downloads from there are slow";
             string gaming = ms < 60 ? "quick enough for fast games" : ms < 120 ? "fine for casual games" : "too far away for fast-paced games";
 
+            var figures = new List<string> { $"{ms:0} ms", result.DownloadMbps is { } d ? $"{Mbps(d)} down" : "no download" };
+            if (result.UploadMbps is { } u) figures.Add($"{Mbps(u)} up");
+
             yield return new SuitabilityRow(
                 $"{continent.Key} · via {best.Row.City}",
                 ms < 150 && mbps >= 5,
-                $"{Capitalise(calls)}; {downloads}; {gaming}. ({ms:0} ms, {(result.DownloadMbps is { } d ? Mbps(d) : "no download")})");
+                $"{Capitalise(calls)}; {downloads}; {gaming}. ({string.Join(", ", figures)})");
         }
     }
 
     private static string Capitalise(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
 
     /// <summary>
-    /// Download bars per region against the left axis and response time as dots against the right.
-    /// Comparing adds the previous results as faded bars and hollow dots beside them.
+    /// Download and upload bars per region against the left axis and response time as dots against the
+    /// right, the dots in the text colour so the upload colour means upload alone. Comparing adds the
+    /// previous results as faded bars and hollow dots beside them.
     /// </summary>
     private void BuildRegionChart()
     {
@@ -701,13 +723,32 @@ public sealed partial class SpeedTestViewModel : ObservableObject
 
         if (CompareRegions)
         {
+            series.Add(new ColumnSeries<ObservablePoint>
+            {
+                Name = "Upload (previous)",
+                Values = Points(r => r.Previous?.UploadMbps),
+                Fill = ChartPaints.Fill(theme.Upload, 80), Stroke = null, MaxBarWidth = 26, Rx = 2, Ry = 2,
+                YToolTipLabelFormatter = p => Mbps(p.Coordinate.PrimaryValue)
+            });
+        }
+
+        series.Add(new ColumnSeries<ObservablePoint>
+        {
+            Name = "Upload",
+            Values = Points(r => r.Latest?.UploadMbps),
+            Fill = ChartPaints.Fill(theme.Upload), Stroke = null, MaxBarWidth = 26, Rx = 2, Ry = 2,
+            YToolTipLabelFormatter = p => Mbps(p.Coordinate.PrimaryValue)
+        });
+
+        if (CompareRegions)
+        {
             series.Add(new LineSeries<ObservablePoint>
             {
                 Name = "Response time (previous)",
                 Values = Points(r => r.Previous?.LatencyMs),
                 ScalesYAt = 1,
                 Stroke = null, Fill = null, GeometrySize = 10,
-                GeometryFill = ChartPaints.Fill(theme.Surface), GeometryStroke = ChartPaints.Stroke(theme.Upload, 1.5f),
+                GeometryFill = ChartPaints.Fill(theme.Surface), GeometryStroke = ChartPaints.Stroke(theme.Text, 1.5f),
                 YToolTipLabelFormatter = p => $"{p.Coordinate.PrimaryValue:0} ms"
             });
         }
@@ -718,7 +759,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject
             Values = Points(r => r.Latest?.LatencyMs),
             ScalesYAt = 1,
             Stroke = null, Fill = null, GeometrySize = 10,
-            GeometryFill = ChartPaints.Fill(theme.Upload), GeometryStroke = ChartPaints.Stroke(theme.Upload, 2),
+            GeometryFill = ChartPaints.Fill(theme.Text), GeometryStroke = ChartPaints.Stroke(theme.Text, 2),
             YToolTipLabelFormatter = p => $"{p.Coordinate.PrimaryValue:0} ms"
         });
 

@@ -99,6 +99,7 @@ public sealed class NetworkHistoryRepository(CyberneticBandwidthDbContext db) : 
             LatencyMs = result.LatencyMs,
             JitterMs = result.JitterMs,
             DownloadMbps = result.DownloadMbps,
+            UploadMbps = result.UploadMbps,
             BytesUsed = result.BytesUsed,
             NetworkName = result.NetworkName,
             Error = result.Error
@@ -116,7 +117,7 @@ public sealed class NetworkHistoryRepository(CyberneticBandwidthDbContext db) : 
         return rows
             .Select(r => new RegionalSpeedResult(
                 DateTimeOffset.FromUnixTimeSeconds(r.ObservedUnix), r.RegionCode, r.LatencyMs, r.JitterMs,
-                r.DownloadMbps, r.BytesUsed, r.NetworkName, r.Error))
+                r.DownloadMbps, r.UploadMbps, r.BytesUsed, r.NetworkName, r.Error))
             .ToList();
     }
 }

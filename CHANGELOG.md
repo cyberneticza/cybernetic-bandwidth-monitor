@@ -33,7 +33,15 @@ major for changes that break the database or the install layout. The version its
   servers in fixed cities: Johannesburg, London, Frankfurt, Mumbai, Singapore, New Jersey, São Paulo,
   Los Angeles, Tokyo and Sydney. Test every region in turn or just one. Cloudflare's own test cannot
   do this: it always answers from the nearest data centre. The regional servers are Vultr's public
-  speed-test hosts and take no uploads.
+  speed-test hosts (see upload around the world, below).
+- **Upload around the world.** The Around the world test now measures upload too, in London,
+  Frankfurt, New Jersey (to a server in New York), Los Angeles and Tokyo, using LibreSpeed's public
+  test servers, since Vultr's take no uploads. Johannesburg, Mumbai, Singapore, São Paulo and Sydney
+  have no such server, so their upload shows "—" with the reason on hover. Upload appears in the
+  region list, the continent verdicts (a weak upload marks video calls down), the By region chart as
+  its own bars, the past tests table and the comparison with the previous test. Response-time dots
+  on that chart are now drawn in the text colour. A region takes about 15 seconds instead of 8. The
+  database schema moves to version 4 with an `UploadMbps` column; the upgrade is automatic.
 - **Each speed test tab has its own verdicts, chart and table.** Local test: "What this connection is
   good for", speed over time and past tests side by side. Around the world: "What these connections
   are good for" per continent (judged from its quickest server), download and response time by

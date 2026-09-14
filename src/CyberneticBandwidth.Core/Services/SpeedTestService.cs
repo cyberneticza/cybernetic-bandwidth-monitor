@@ -15,7 +15,9 @@ namespace CyberneticBandwidth.Core.Services;
 ///    for latency, download and upload. Cloudflare is anycast, so this always reaches the closest
 ///    data centre and cannot be pointed anywhere else.
 ///  - <b>Regional</b>: public test files on Vultr servers in fixed cities across the continents,
-///    for latency and download to that part of the world. They accept no uploads.
+///    for latency and download to that part of the world. Vultr's servers accept no uploads, so
+///    upload goes to a LibreSpeed server in the same city (or the next one over) where the public
+///    LibreSpeed list has one, and is not measured elsewhere.
 ///
 /// Downloads run for a fixed time rather than a fixed size, growing the request size while
 /// requests finish quickly, so a slow line is not stuck on a huge file and a fast one is not
@@ -39,37 +41,51 @@ public sealed class SpeedTestService(
     private static readonly TimeSpan DownloadBudget = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan UploadBudget = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan RegionalDownloadBudget = TimeSpan.FromSeconds(6);
+    private static readonly TimeSpan RegionalUploadBudget = TimeSpan.FromSeconds(6);
 
     /// <summary>
     /// A distant server behind a buffering proxy can take many seconds to start answering; past this
     /// the region is reported with whatever arrived rather than holding up the rest of the run.
+    /// Upload gets its own deadline of the same length, so a slow download does not leave it no time.
     /// </summary>
     private static readonly TimeSpan RegionalDeadline = TimeSpan.FromSeconds(25);
 
     private static readonly TimeSpan RampUp = TimeSpan.FromSeconds(1.5);
     private const long DownloadByteCap = 500_000_000;
     private const long UploadByteCap = 150_000_000;
+    private const long RegionalUploadByteCap = 100_000_000;
 
     /// <summary>
     /// Vultr's public speed-test hosts, spread across continents and ordered roughly by distance from
     /// southern Africa. Each serves the same 100 MB file and honours range requests.
+    ///
+    /// Upload servers come from LibreSpeed's public list (librespeed.org/backend-servers/servers.php),
+    /// whose servers take uploads at <c>empty.php</c>. That list has nothing in Johannesburg, Mumbai,
+    /// Singapore, São Paulo or Sydney, so those regions measure no upload. New Jersey's goes to New York,
+    /// about 15 km away.
     /// </summary>
     public static IReadOnlyList<SpeedTestRegion> Regions { get; } =
     [
         Vultr("jnb-za", "Johannesburg", "South Africa", "Africa"),
-        Vultr("lon-gb", "London", "United Kingdom", "Europe"),
-        Vultr("fra-de", "Frankfurt", "Germany", "Europe"),
+        Vultr("lon-gb", "London", "United Kingdom", "Europe") with { UploadUrl = LibreSpeed("https://lon.speedtest.clouvider.net/backend/empty.php") },
+        Vultr("fra-de", "Frankfurt", "Germany", "Europe") with { UploadUrl = LibreSpeed("https://fra.speedtest.clouvider.net/backend/empty.php") },
         Vultr("bom-in", "Mumbai", "India", "Asia"),
         Vultr("sgp", "Singapore", "Singapore", "Asia"),
-        Vultr("nj-us", "New Jersey", "United States", "North America"),
+        Vultr("nj-us", "New Jersey", "United States", "North America") with
+        {
+            UploadUrl = LibreSpeed("https://nyc.speedtest.clouvider.net/backend/empty.php"),
+            UploadCity = "New York"
+        },
         Vultr("sao-br", "São Paulo", "Brazil", "South America"),
-        Vultr("lax-ca-us", "Los Angeles", "United States", "North America"),
-        Vultr("hnd-jp", "Tokyo", "Japan", "Asia"),
+        Vultr("lax-ca-us", "Los Angeles", "United States", "North America") with { UploadUrl = LibreSpeed("https://la.speedtest.clouvider.net/backend/empty.php") },
+        Vultr("hnd-jp", "Tokyo", "Japan", "Asia") with { UploadUrl = LibreSpeed("https://librespeed.a573.net/backend/empty.php") },
         Vultr("syd-au", "Sydney", "Australia", "Oceania")
     ];
 
     private static SpeedTestRegion Vultr(string code, string city, string country, string continent) =>
         new(code, city, country, continent, new Uri($"https://{code}-ping.vultr.com/vultr.com.100MB.bin"));
+
+    private static Uri LibreSpeed(string url) => new(url);
 
     private readonly SemaphoreSlim _running = new(1, 1);
 
@@ -107,7 +123,11 @@ public sealed class SpeedTestService(
                 SpeedTestPhase.Download, 0.1 + 0.5 * Math.Min(1, elapsed / DownloadBudget), mbps, latency)),
             ct);
 
-        var (upload, uploaded) = await MeasureUploadAsync(http, progress, latency, ct);
+        var (upload, uploaded) = await MeasureUploadAsync(http, new Uri($"{CloudflareUrl}/__up"),
+            UploadBudget, UploadByteCap, deadline: CancellationToken.None,
+            (elapsed, mbps) => progress.Report(new SpeedTestProgress(
+                SpeedTestPhase.Upload, 0.6 + 0.4 * Math.Min(1, elapsed / UploadBudget), mbps, latency)),
+            ct);
 
         progress.Report(new SpeedTestProgress(SpeedTestPhase.Done, 1, null, latency));
 
@@ -165,7 +185,7 @@ public sealed class SpeedTestService(
             return request;
         }
 
-        double? latency = null, jitter = null, download = null;
+        double? latency = null, jitter = null, download = null, upload = null;
         long bytes = 0;
 
         try
@@ -196,9 +216,19 @@ public sealed class SpeedTestService(
                 problem = "Download did not start in time";
             }
 
+            if (region.UploadUrl is { } uploadUrl)
+            {
+                string? uploadProblem;
+                (upload, long sent, uploadProblem) = await TestRegionUploadAsync(http, region, uploadUrl, latency, progress, ct);
+                bytes += sent;
+                if (uploadProblem is not null) problem = problem is null ? uploadProblem : $"{problem}; {uploadProblem.ToLowerInvariant()}";
+            }
+
             progress.Report(new RegionalProgress(region.Code, SpeedTestPhase.Done, download, latency));
-            log.LogInformation("Regional speed test {Region}: {Latency:0} ms, {Down:0.0} Mbps down.", region.City, latency, download);
-            return new RegionalSpeedResult(DateTimeOffset.UtcNow, region.Code, latency, jitter, download, bytes,
+            log.LogInformation("Regional speed test {Region}: {Latency:0} ms, {Down:0.0} Mbps down, {Up}.",
+                region.City, latency, download,
+                upload is { } up ? $"{up:0.0} Mbps up" : region.MeasuresUpload ? "upload failed" : "no upload server");
+            return new RegionalSpeedResult(DateTimeOffset.UtcNow, region.Code, latency, jitter, download, upload, bytes,
                 broker.LatestNetwork?.NetworkName, problem);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
@@ -208,8 +238,33 @@ public sealed class SpeedTestService(
             string error = deadline.IsCancellationRequested ? "No answer in time" : "Could not reach the server";
             log.LogWarning(ex, "Regional speed test {Region} failed.", region.City);
             progress.Report(new RegionalProgress(region.Code, SpeedTestPhase.Done, download, latency));
-            return new RegionalSpeedResult(DateTimeOffset.UtcNow, region.Code, latency, jitter, download, bytes,
+            return new RegionalSpeedResult(DateTimeOffset.UtcNow, region.Code, latency, jitter, download, upload, bytes,
                 broker.LatestNetwork?.NetworkName, error);
+        }
+    }
+
+    /// <summary>
+    /// Upload to the region's upload server, on its own deadline. It is a different server from the
+    /// download's, so its failure is reported beside the download rather than instead of it.
+    /// </summary>
+    private async Task<(double? Mbps, long Bytes, string? Problem)> TestRegionUploadAsync(
+        HttpClient http, SpeedTestRegion region, Uri url, double? latency, IProgress<RegionalProgress> progress, CancellationToken ct)
+    {
+        using var deadline = new CancellationTokenSource(RegionalDeadline);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, deadline.Token);
+
+        try
+        {
+            progress.Report(new RegionalProgress(region.Code, SpeedTestPhase.Upload, null, latency));
+            var (mbps, bytes) = await MeasureUploadAsync(http, url, RegionalUploadBudget, RegionalUploadByteCap, deadline.Token,
+                (_, current) => progress.Report(new RegionalProgress(region.Code, SpeedTestPhase.Upload, current, latency)),
+                linked.Token);
+            return mbps > 0 ? (mbps, bytes, null) : (null, bytes, "Upload did not start in time");
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            log.LogWarning(ex, "Regional upload test {Region} failed.", region.City);
+            return (null, 0, deadline.IsCancellationRequested ? "Upload got no answer in time" : "Could not reach the upload server");
         }
     }
 
@@ -309,8 +364,14 @@ public sealed class SpeedTestService(
         return (meter.SteadyMbps(clock.Elapsed), meter.TotalBytes);
     }
 
+    /// <summary>
+    /// Uploads for <paramref name="budget"/> by POSTing random bytes to <paramref name="url"/>, growing
+    /// requests from 1 MB until one takes about a second. When <paramref name="deadline"/> fires, the
+    /// requests that completed still count.
+    /// </summary>
     private static async Task<(double Mbps, long Bytes)> MeasureUploadAsync(
-        HttpClient http, IProgress<SpeedTestProgress> progress, double latencyMs, CancellationToken ct)
+        HttpClient http, Uri url, TimeSpan budget, long byteCap, CancellationToken deadline,
+        Action<TimeSpan, double> onProgress, CancellationToken ct)
     {
         int size = 1_000_000;
         byte[] payload = [];
@@ -319,40 +380,45 @@ public sealed class SpeedTestService(
         var steadyTime = TimeSpan.Zero;
         var clock = Stopwatch.StartNew();
 
-        while (clock.Elapsed < UploadBudget && sentBytes < UploadByteCap)
+        try
         {
-            // Grown with the request size, so a slow line never pays for the largest chunk. Random,
-            // so no compressing proxy on the way can make the upload look faster than it is.
-            if (payload.Length < size)
+            while (clock.Elapsed < budget && sentBytes < byteCap)
             {
-                payload = new byte[size];
-                RandomNumberGenerator.Fill(payload);
+                // Grown with the request size, so a slow line never pays for the largest chunk. Random,
+                // so no compressing proxy on the way can make the upload look faster than it is.
+                if (payload.Length < size)
+                {
+                    payload = new byte[size];
+                    RandomNumberGenerator.Fill(payload);
+                }
+
+                using var content = new ByteArrayContent(payload, 0, size);
+                content.Headers.ContentType = new("application/octet-stream");
+
+                var requestClock = Stopwatch.StartNew();
+                var started = clock.Elapsed;
+                using var response = await http.PostAsync(url, content, ct);
+                response.EnsureSuccessStatusCode();
+                var took = requestClock.Elapsed;
+
+                sentBytes += size;
+
+                // Timed from send to response, which includes the server's acknowledgement; bytes
+                // merely handed to the local socket buffer would read as far faster than the line.
+                if (started >= RampUp || clock.Elapsed >= budget)
+                {
+                    steadyBytes += size;
+                    steadyTime += took;
+                }
+
+                onProgress(clock.Elapsed, size * 8 / took.TotalSeconds / 1_000_000);
+
+                if (took < TimeSpan.FromSeconds(1)) size = Math.Min(size * 4, MaxUploadChunk);
             }
-
-            using var content = new ByteArrayContent(payload, 0, size);
-            content.Headers.ContentType = new("application/octet-stream");
-
-            var requestClock = Stopwatch.StartNew();
-            var started = clock.Elapsed;
-            using var response = await http.PostAsync($"{CloudflareUrl}/__up", content, ct);
-            response.EnsureSuccessStatusCode();
-            var took = requestClock.Elapsed;
-
-            sentBytes += size;
-
-            // Timed from send to response, which includes the server's acknowledgement; bytes
-            // merely handed to the local socket buffer would read as far faster than the line.
-            if (started >= RampUp || clock.Elapsed >= UploadBudget)
-            {
-                steadyBytes += size;
-                steadyTime += took;
-            }
-
-            double mbps = size * 8 / took.TotalSeconds / 1_000_000;
-            double fraction = 0.6 + 0.4 * Math.Min(1, clock.Elapsed / UploadBudget);
-            progress.Report(new SpeedTestProgress(SpeedTestPhase.Upload, fraction, mbps, latencyMs));
-
-            if (took < TimeSpan.FromSeconds(1)) size = Math.Min(size * 4, MaxUploadChunk);
+        }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested && sentBytes > 0)
+        {
+            // Out of time mid-request: the requests that completed are the measurement.
         }
 
         double result = steadyTime > TimeSpan.Zero
