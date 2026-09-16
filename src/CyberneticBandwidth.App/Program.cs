@@ -10,6 +10,7 @@ namespace CyberneticBandwidth.App;
 /// One program, three ways to run:
 ///  - <c>--service</c>: the Windows service. No window: collects and serves windows over the collector link.
 ///  - <c>--install-service</c> / <c>--remove-service</c>: the elevated setup step Settings starts behind a UAC prompt.
+///  - <c>--veloapp-*</c>: a hook of the installer (see <see cref="Installer"/>), which runs and exits.
 ///  - otherwise the window, which collects itself, or shows the service's data when the service is installed.
 /// </summary>
 public static class Program
@@ -27,6 +28,9 @@ public static class Program
 
         if (CollectorServiceSetup.IsSetupCommand(args))
             return CollectorServiceSetup.RunSetupCommand(args);
+
+        // Exits here when Setup.exe or an update runs this program for one of its hooks.
+        Installer.Run();
 
         App.Mode = args.Any(a => a.Equals(ViewerArgument, StringComparison.OrdinalIgnoreCase)) || CollectorServiceSetup.IsInstalled()
             ? CollectorMode.Viewer

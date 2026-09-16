@@ -144,6 +144,7 @@ internal static class HostingExtensions
         builder.Services.AddSingleton<NavigationRequests>();
         builder.Services.AddSingleton<UsageAlertService>();
         builder.Services.AddSingleton<SpeedTestService>();
+        builder.Services.AddSingleton<AppUpdates>();
 
         builder.Services.AddSingleton<ShellWindow>();
         builder.Services.AddSingleton<ShellViewModel>();

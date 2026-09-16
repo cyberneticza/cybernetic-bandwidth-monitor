@@ -1,6 +1,11 @@
 <UserControl x:Class="CyberneticBandwidth.App.Views.AboutView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:CyberneticBandwidth.App.Converters">
+
+  <UserControl.Resources>
+    <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+  </UserControl.Resources>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto" FocusVisualStyle="{x:Null}">
     <StackPanel Margin="{StaticResource PagePadding}" MaxWidth="820" HorizontalAlignment="Left">
@@ -53,6 +58,25 @@
           <TextBlock Text="Your data stays here" Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,16,0,0" />
           <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="20"
                      Text="History is kept in a local database in the data folder below and is never uploaded. The app only goes online for two things you can see and control: the connection quality check (a tiny request to Cloudflare every 30 seconds, which can be turned off in Settings) and speed tests you start yourself (to Cloudflare, and to Vultr and LibreSpeed servers for the regional test). Neither sends anything about you or your usage." />
+        </StackPanel>
+      </Border>
+
+      <!-- Updates: a newer Setup.exe, or from inside the app when Updates:Source is set. -->
+      <Border Style="{StaticResource Panel}" Padding="22" Margin="0,0,0,14">
+        <StackPanel>
+          <TextBlock Text="Updates" Style="{StaticResource HeadingText}" />
+          <TextBlock Text="{Binding UpdateStatus}" Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,10,0,0" LineHeight="20" />
+
+          <WrapPanel Margin="0,12,0,0" Visibility="{Binding CanCheckForUpdates, Converter={StaticResource BoolToVisibility}}">
+            <Button Style="{StaticResource PrimaryButton}" Padding="16,8" Margin="0,0,8,0" Command="{Binding InstallUpdateCommand}"
+                    Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibility}}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE896;" Style="{StaticResource IconText}" Margin="0,0,8,0" />
+                <TextBlock Text="Install and restart" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Content="Check for updates" Command="{Binding CheckForUpdatesCommand}" />
+          </WrapPanel>
         </StackPanel>
       </Border>
 

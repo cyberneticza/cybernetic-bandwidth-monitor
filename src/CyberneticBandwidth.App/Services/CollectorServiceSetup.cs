@@ -286,12 +286,15 @@ public static class CollectorServiceSetup
 
         Directory.CreateDirectory(InstallDirectory);
         string[] skippedExtensions = [".pdf", ".ps1", ".log", ".db", ".db-wal", ".db-shm"];
+        // What Setup.exe adds beside the program (see Installer): the service's copy is not an install to update.
+        string[] skippedNames = ["sq.version", "Squirrel.exe", "CyberneticBandwidth_ExecutionStub.exe"];
 
         foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
         {
             string relative = Path.GetRelativePath(source, file);
             if (relative.StartsWith("logs" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) continue;
             if (skippedExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) continue;
+            if (skippedNames.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase)) continue;
 
             string target = Path.Combine(InstallDirectory, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);

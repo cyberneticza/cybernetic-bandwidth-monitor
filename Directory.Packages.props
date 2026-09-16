@@ -19,5 +19,7 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageVersion Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc5.4" />
+    <!-- Keep in step with the vpk tool in dotnet-tools.json: the installer and the library ship together. -->
+    <PackageVersion Include="Velopack" Version="1.2.0" />
   </ItemGroup>
 </Project>

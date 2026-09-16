@@ -32,6 +32,15 @@ Much better to discover that now than in week three.
 
 ## Build and install
 
+**To share it**, build the one-click installer and send the Setup.exe (see [The installer](#the-installer)):
+
+```powershell
+pwsh -File build\make-installer.ps1
+# -> artifacts\releases\CyberneticBandwidthMonitor-win-Setup.exe
+```
+
+**To install it from source** on this machine:
+
 ```powershell
 dotnet restore
 dotnet build -c Release
@@ -74,6 +83,38 @@ reuse the current `artifacts\portable` build.
 
 `build\make-icon.ps1` regenerates `src\CyberneticBandwidth.App\Assets\CyberneticBandwidth.ico` from code; pass
 `-PreviewPath` to also write each size as a PNG.
+
+### The installer
+
+`build\make-installer.ps1` publishes, then packs `artifacts\portable` with [Velopack](https://velopack.io)
+(MIT licensed) into `artifacts\releases`. `vpk` is a local tool pinned in `dotnet-tools.json`; keep it
+at the same version as the `Velopack` package. Share `CyberneticBandwidthMonitor-win-Setup.exe`:
+
+- **Installing** needs no administrator rights. It installs to `%LocalAppData%\CyberneticBandwidthMonitor`
+  (the program in `current\`, beside Velopack's `Update.exe`), adds Start Menu and desktop shortcuts
+  and an Apps entry, and starts the app. It replaces a copy installed by `install-peruser.ps1`: stops
+  it and removes its folder, shortcut and Apps entry (`Installer`). The history stays, and start at
+  sign-in moves over to the new copy on its first start.
+- **Updating** is running the Setup.exe of a newer version. It closes the running copy and installs
+  over it; history and preferences are untouched.
+- **Uninstalling** from Settings > Apps deletes `%LocalAppData%\CyberneticBandwidthMonitor` and turns off
+  start at sign-in, but keeps the history in `%LocalAppData%\CyberneticBandwidth`. That is why the
+  package id is `CyberneticBandwidthMonitor` and must never be `CyberneticBandwidth`. Remove the Windows
+  service from Settings first: Velopack's uninstall runs unelevated and cannot.
+- **Unsigned**, so SmartScreen warns the first time ("More info", then "Run anyway"). `vpk pack`
+  takes `--signParams` for a code-signing certificate.
+
+Velopack runs `CyberneticBandwidth.exe --veloapp-install` (and `-updated`, `-obsolete`, `-uninstall`)
+for its hooks; `Installer.Run` in `Program.Main` handles them and exits before the window starts. The
+service and the elevated setup step are dispatched before it, and `CollectorServiceSetup` leaves
+Velopack's files out of the Program Files copy.
+
+**Updates from inside the app.** Set `Updates:Source` in `appsettings.json` to a folder (a network
+share) or web address, and publish each release there: `make-installer.ps1 -PublishTo <folder>`, or
+copy the files in `artifacts\releases`. About then offers **Check for updates** and **Install and
+restart**, which downloads the release (a small delta when `artifacts\releases` held the previous
+one) and restarts into it. Left empty, About says that a newer Setup.exe is how to update. A copy
+not installed by Setup.exe (a build, the portable exe, the install script) cannot update itself.
 
 ## How it measures, and what that costs you
 
@@ -367,6 +408,7 @@ Two files, for two audiences.
 | `Sampler` | Polling intervals, how far each usage pass re-reads, first-run backfill, idle back-off |
 | `Retention` | How long minute, hour and day buckets, connection events, health samples and network events are kept |
 | `Health` | Quality-check interval, the HTTPS probe URL, probes per check, the Slow thresholds, and how many checks must agree before an event |
+| `Updates` | `Source`: the folder or web address copies installed by Setup.exe check for new releases; empty for none |
 
 **`%LocalAppData%\CyberneticBandwidth\preferences.json`** holds what the user chose in the app: theme, whether
 quality checks run, heavy-use alert threshold, budgets and their reset day, which budget warnings
@@ -384,7 +426,12 @@ To release:
 1. Move the entries under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) into a new version heading
    with today's date.
 2. Set `VersionPrefix` to that version.
-3. `pwsh -File build\make-transfer.ps1` (publishes too), then install or distribute `artifacts\transfer`.
+3. `pwsh -File build\make-installer.ps1` (publishes too), then share
+   `artifacts\releases\CyberneticBandwidthMonitor-win-Setup.exe`. With `Updates:Source` set, add
+   `-PublishTo` so installed copies find it. Keep `artifacts\releases`: the next release's delta
+   update is made from it.
+4. For the portable exe or the install scripts, `pwsh -File build\make-transfer.ps1 -SkipPublish`,
+   then distribute `artifacts\transfer`.
 
 ## Layout
 
@@ -392,7 +439,7 @@ To release:
 src/CyberneticBandwidth.Core    Sources, interop, sampler, health monitor, speed test, domain models. No UI, no database.
 src/CyberneticBandwidth.Data    SQLite schema, repositories, rollup and retention.
 src/CyberneticBandwidth.App     WPF shell, pages and view models, theme, tray icon, alerts, preferences.
-build/               Publish, install, uninstall, transfer packages and guides, probe, icon generation.
+build/               Publish, installer, install, uninstall, transfer packages and guides, probe, icon generation.
 ```
 
 `INetworkUsageSource` is the seam that matters. The sampler picks the highest-priority source that
@@ -509,6 +556,7 @@ While the service is installed, its own log is in `%ProgramData%\CyberneticBandw
 | `Microsoft.EntityFrameworkCore.Sqlite` | Querying and model. The hot write path and the rollup are raw SQL. |
 | `LiveChartsCore.SkiaSharpView.WPF` | Skia-rendered charts that survive thousands of points and update live. |
 | `Serilog.*` | Rolling file logs in the data folder. Diagnosing a blocked NDU from a user's log is the point. |
+| `Velopack` | The one-click installer, its install and uninstall hooks, and updates from inside the app. |
 
 WinRT projections need no package — the `net10.0-windows10.0.19041.0` target framework brings them.
 The tray icon is WinForms' `NotifyIcon` (`UseWindowsForms` in the App project), part of the Windows

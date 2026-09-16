@@ -9,6 +9,12 @@ major for changes that break the database or the install layout. The version its
 
 ### Added
 
+- **One-click installer.** `CyberneticBandwidthMonitor-win-Setup.exe` installs for the current user
+  with no administrator prompt, adds Start Menu and desktop shortcuts and an Apps entry, and replaces
+  a copy installed by the install script. Running the Setup.exe of a newer version updates the
+  install in place, keeping your history. Uninstalling from Settings > Apps keeps the history too.
+- **Updates on the About page.** Shows how this copy updates, and when the build names an update
+  location, checks it for a newer version and installs it with a restart.
 - **History page.** A report for any range of days, from quick ranges (last 7, 30 or 90 days, this
   or last month, this year, last 12 months, everything recorded) or a custom range picked on a
   calendar that marks the days with usage. It shows:

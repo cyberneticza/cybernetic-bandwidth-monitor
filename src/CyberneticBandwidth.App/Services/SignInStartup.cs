@@ -52,6 +52,28 @@ public static class SignInStartup
     }
 
     /// <summary>
+    /// Turns start at sign-in off when it starts a program in <paramref name="directory"/>. Run as
+    /// that copy is uninstalled, so sign-in does not go on starting a missing file.
+    /// </summary>
+    public static void DisableFor(string directory)
+    {
+        try
+        {
+            if (TaskProgram() is { } task && IsInside(task, directory)) Schtasks("/Delete", "/TN", TaskName, "/F");
+            if (RunKeyProgram() is { } runKey && IsInside(runKey, directory)) DeleteRunKey();
+        }
+        catch (Exception)
+        {
+            // Left in place: it starts nothing once the program is gone.
+        }
+    }
+
+    public static bool IsInside(string path, string directory) =>
+        Path.GetFullPath(path).StartsWith(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)) + Path.DirectorySeparatorChar,
+            StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Run at every start. Moves a Run-key entry made by an older version of this copy over to a
     /// task, and points a task whose program is gone at this copy, so moving Cybernetic Bandwidth Monitor does not leave
     /// sign-in starting a missing file. Entries belonging to another copy that still exists are left alone.

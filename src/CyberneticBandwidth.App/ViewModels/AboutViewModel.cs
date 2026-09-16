@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using CyberneticBandwidth.App.Services;
 using CyberneticBandwidth.Core.Abstractions;
 using CyberneticBandwidth.Data;
+using Velopack;
 
 namespace CyberneticBandwidth.App.ViewModels;
 
@@ -32,8 +33,26 @@ public sealed partial class AboutViewModel : ObservableObject
 
     private readonly string _dataDirectory;
     private readonly string _logDirectory;
+    private readonly AppUpdates _updates;
+    private UpdateInfo? _availableUpdate;
 
-    public AboutViewModel(IOptions<StorageOptions> storage, IEnumerable<INetworkUsageSource> sources, RunMode mode)
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(InstallUpdateCommand))]
+    private bool _isUpdateBusy;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsUpdateAvailable))]
+    [NotifyCanExecuteChangedFor(nameof(InstallUpdateCommand))]
+    private string? _availableVersion;
+
+    [ObservableProperty]
+    private string _updateStatus;
+
+    public bool CanCheckForUpdates => _updates.CanCheck;
+
+    public bool IsUpdateAvailable => AvailableVersion is not null;
+
+    public AboutViewModel(IOptions<StorageOptions> storage, IEnumerable<INetworkUsageSource> sources, RunMode mode, AppUpdates updates)
     {
         var assembly = Assembly.GetEntryAssembly() ?? typeof(AboutViewModel).Assembly;
         var version = assembly.GetName().Version ?? new Version(0, 0, 0, 0);
@@ -67,11 +86,68 @@ public sealed partial class AboutViewModel : ObservableObject
             new("Runtime", $"{RuntimeInformation.FrameworkDescription} ({RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant()})"),
             new("Windows", WindowsName()),
             new("Byte counts from", source),
+            new("Installed by", updates.IsInstalled ? "Setup.exe" : "Not the installer"),
             new("Installed in", AppContext.BaseDirectory.TrimEnd('\\')),
             new("Data folder", _dataDirectory)
         ];
 
         Logo = LoadLogo();
+
+        _updates = updates;
+        _updateStatus = !updates.IsInstalled
+            ? "This copy was not installed with Setup.exe, so it cannot update itself. Install with CyberneticBandwidthMonitor-win-Setup.exe to get updates; your history is kept."
+            : updates.CanCheck
+                ? $"Updates come from {updates.Source}."
+                : "To update, run the Setup.exe of a newer version. It installs over this one and keeps your history and settings.";
+    }
+
+    private bool CanCheckNow => _updates.CanCheck && !IsUpdateBusy;
+
+    [RelayCommand(CanExecute = nameof(CanCheckNow))]
+    private async Task CheckForUpdatesAsync()
+    {
+        IsUpdateBusy = true;
+        UpdateStatus = "Checking for updates…";
+        try
+        {
+            _availableUpdate = await _updates.CheckAsync();
+            AvailableVersion = _availableUpdate?.TargetFullRelease.Version.ToString();
+            UpdateStatus = AvailableVersion is null
+                ? $"You have the latest version, {Version}."
+                : $"Version {AvailableVersion} is available. Installing it restarts Cybernetic Bandwidth Monitor; your history is kept.";
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus = $"Could not check for updates at {_updates.Source}: {ex.Message}";
+        }
+        finally
+        {
+            IsUpdateBusy = false;
+        }
+    }
+
+    private bool CanInstallNow => _availableUpdate is not null && !IsUpdateBusy;
+
+    [RelayCommand(CanExecute = nameof(CanInstallNow))]
+    private async Task InstallUpdateAsync()
+    {
+        if (_availableUpdate is null) return;
+
+        IsUpdateBusy = true;
+        try
+        {
+            await _updates.DownloadAsync(_availableUpdate, percent =>
+                Application.Current.Dispatcher.BeginInvoke(() => UpdateStatus = $"Downloading version {AvailableVersion}… {percent}%"));
+
+            UpdateStatus = $"Installing version {AvailableVersion}…";
+            _updates.ApplyAfterExit(_availableUpdate);
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus = $"Could not install version {AvailableVersion}: {ex.Message}";
+            IsUpdateBusy = false;
+        }
     }
 
     [RelayCommand]
